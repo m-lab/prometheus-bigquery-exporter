@@ -14,27 +14,31 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// QueryRunner defines the interface used to run a query and return an array of metrics.
 type QueryRunner interface {
 	Query(q string) ([]Metric, error)
 }
 
-type queryRunnerImpl struct {
-	client *bigquery.Client
-}
-
-// metric holds raw data from query results needed to create a prometheus.Metric.
+// Metric holds raw data from query results needed to create a prometheus.Metric.
 type Metric struct {
 	labels []string
 	values []string
 	value  float64
 }
 
-// NewQueryRunner creates a new query runner instance.
+// queryRunnerImpl is a concerete implementation of QueryRunner for BigQuery.
+type queryRunnerImpl struct {
+	client *bigquery.Client
+}
+
+// NewQueryRunner creates a new QueryRunner instance.
 func NewQueryRunner(client *bigquery.Client) QueryRunner {
 	return &queryRunnerImpl{client}
 }
 
-// Query executes the given query
+// Query executes the given query. Currently only Legacy SQL is supported. The
+// query must define a column named "value" for the value, and may define label
+// columns that use the prefix "label_".
 func (qr *queryRunnerImpl) Query(query string) ([]Metric, error) {
 	metrics := []Metric{}
 
@@ -98,8 +102,9 @@ func valToString(v bigquery.Value) string {
 // rowToMetric converts a bigquery result row to a bq.Metric
 func rowToMetric(row map[string]bigquery.Value) Metric {
 	m := Metric{}
-	// Since `range` does not guarantee map key order, we must extract, sort
-	// and then extract values.
+
+	// Note that `range` does not guarantee map key order. So, we extract label
+	// names, sort them, and then extract values.
 	for k, v := range row {
 		if strings.HasPrefix(k, "label_") {
 			m.labels = append(m.labels, strings.TrimPrefix(k, "label_"))
@@ -110,7 +115,7 @@ func rowToMetric(row map[string]bigquery.Value) Metric {
 	sort.Strings(m.labels)
 
 	for i := range m.labels {
-		key := fmt.Sprintf("label_%s", m.labels[i])
+		key := "label_" + m.labels[i]
 		m.values = append(m.values, valToString(row[key]))
 	}
 	return m

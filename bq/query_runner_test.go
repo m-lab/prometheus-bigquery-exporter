@@ -37,6 +37,17 @@ func TestRowToMetric(t *testing.T) {
 			},
 		},
 		{
+			name: "Integer value",
+			row: map[string]bigquery.Value{
+				"value": int64(10),
+			},
+			metric: Metric{
+				labels: nil,
+				values: nil,
+				value:  10,
+			},
+		},
+		{
 			name: "Bad label values are converted to strings",
 			row: map[string]bigquery.Value{
 				"label_name": 3.0, // should be a string.
