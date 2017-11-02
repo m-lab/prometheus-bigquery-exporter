@@ -13,8 +13,8 @@ collection.
 the past!
 
 So, the results of queries run by prometheus-bigquery-exporter should represent
-a meaningful value at a fixed point in time, e.g. total number of tests in a 5
-minute window 1 hour ago.
+a meaningful value at a fixed point in time relative to the time the query is
+made, e.g. total number of tests in a 5 minute window 1 hour ago.
 
 # Query format
 
@@ -24,29 +24,31 @@ successfully interpret and convert it into prometheus metrics.
 
 Required columns:
 
- * `value` -- every query result must have a "value". If there is more than one
-   row, then the query must also define labels to distinguish each value.
-
-   Values should be integers or floats.
+ * `value` -- every query result must have a "value". Values should be integers
+   or floats.
 
 Optional columns:
 
- * `label_*` -- to add metric labels define result columns that use names
-   starting with the prefix `label_`, e.g. `label_machine` will create a label
-   named "machine" with the value taken from the query results for that column.
+ * If there is more than one result row, then the query must also define labels
+   to distinguish each value. Every column name that is not "value" will create
+   a label on the resulting metric. For example, results with two columns,
+   "machine" and "value" would create metrics with labels named "machine" and
+   values from the results for that row.
 
    Labels should be strings.
 
-There is no limit on the number of labels, but you should respect the prometheus
-best practices by limiting label value cardinality.
+   There is no limit on the number of labels, but you should respect the
+   prometheus best practices by limiting label value cardinality.
 
 ## Example query
 
 The following query creates a "machine" label and counts the number of tests
 
 ```
+# TODO: replace with query using views.
+# TODO: replace with standard SQL syntax.
 SELECT
-    -- All metric labels should have a column name prefixed with "label_"
+    -- All columns not named "value" are added as metric labels.
     CONCAT(REPLACE(REGEXP_EXTRACT(task_filename,
         r'gs://.*-(mlab[1-4]-[a-z]{3}[0-9]+)-ndt.*.tgz'), "-", "."),
         ".measurement-lab.org") AS label_machine,
