@@ -55,7 +55,7 @@ func TestRowToMetric(t *testing.T) {
 			},
 			metric: Metric{
 				labels: []string{"name"},
-				values: []string{"3.00"}, // converted to a string.
+				values: []string{"invalid string"}, // converted to a string.
 				value:  2.1,
 			},
 		},
