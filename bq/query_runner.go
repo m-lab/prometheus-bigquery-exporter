@@ -43,7 +43,7 @@ func (qr *queryRunnerImpl) Query(query string) ([]Metric, error) {
 
 	q := qr.client.Query(query)
 
-	// TODO: check query string for SQL type.
+	// TODO: only use Standard SQL.
 	q.QueryConfig.UseLegacySQL = true
 
 	// TODO: add context timeout.
