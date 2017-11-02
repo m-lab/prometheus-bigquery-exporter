@@ -5,10 +5,9 @@ package bq
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"math"
 	"sort"
-	"strings"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/iterator"
@@ -45,7 +44,7 @@ func (qr *queryRunnerImpl) Query(query string) ([]Metric, error) {
 	q := qr.client.Query(query)
 
 	// TODO: check query string for SQL type.
-	q.QueryConfig.UseStandardSQL = false
+	q.QueryConfig.UseLegacySQL = true
 
 	// TODO: add context timeout.
 	it, err := q.Read(context.Background())
@@ -79,7 +78,7 @@ func valToFloat(v bigquery.Value) float64 {
 	case float64:
 		return v.(float64)
 	default:
-		return 0
+		return math.NaN()
 	}
 }
 
@@ -92,9 +91,7 @@ func valToString(v bigquery.Value) string {
 	case string:
 		s = v.(string)
 	default:
-		// This should not happen too often, but if it does, hardcode 2 decimal
-		// points to try to protect label value cardinailty.
-		s = fmt.Sprintf("%.2f", valToFloat(v))
+		s = "invalid string"
 	}
 	return s
 }
@@ -106,17 +103,16 @@ func rowToMetric(row map[string]bigquery.Value) Metric {
 	// Note that `range` does not guarantee map key order. So, we extract label
 	// names, sort them, and then extract values.
 	for k, v := range row {
-		if strings.HasPrefix(k, "label_") {
-			m.labels = append(m.labels, strings.TrimPrefix(k, "label_"))
-		} else if k == "value" {
+		if k == "value" {
 			m.value = valToFloat(v)
+		} else {
+			m.labels = append(m.labels, k)
 		}
 	}
 	sort.Strings(m.labels)
 
 	for i := range m.labels {
-		key := "label_" + m.labels[i]
-		m.values = append(m.values, valToString(row[key]))
+		m.values = append(m.values, valToString(row[m.labels[i]]))
 	}
 	return m
 }

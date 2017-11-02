@@ -16,8 +16,8 @@ func TestRowToMetric(t *testing.T) {
 		{
 			name: "Extract labels",
 			row: map[string]bigquery.Value{
-				"label_machine": "mlab1.foo01.measurement-lab.org",
-				"value":         1.0,
+				"machine": "mlab1.foo01.measurement-lab.org",
+				"value":   1.0,
 			},
 			metric: Metric{
 				labels: []string{"machine"},
@@ -50,8 +50,8 @@ func TestRowToMetric(t *testing.T) {
 		{
 			name: "Bad label values are converted to strings",
 			row: map[string]bigquery.Value{
-				"label_name": 3.0, // should be a string.
-				"value":      2.1,
+				"name":  3.0, // should be a string.
+				"value": 2.1,
 			},
 			metric: Metric{
 				labels: []string{"name"},
