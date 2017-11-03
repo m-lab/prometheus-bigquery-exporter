@@ -24,6 +24,7 @@ var (
 	valueTypes   = []string{}
 	querySources = []string{}
 	project      = flag.String("project", "", "GCP project name.")
+	port         = flag.String("port", "9050", "Exporter port.")
 	refresh      = flag.Duration("refresh", 5*time.Minute, "Number of seconds between refreshing.")
 )
 
@@ -47,8 +48,10 @@ func fileToMetric(filename string) string {
 	return strings.TrimSuffix(fname, filepath.Ext(fname))
 }
 
-// registerCollector
-func createCollector(typeName, filename string, refresh time.Duration) (*bq.Collector, error) {
+// createCollector creates a bq.Collector initialized with the BQ query
+// contained in filename. The returned collector should be registered with
+// prometheus.Register.
+func createCollector(filename, typeName string, vars map[string]string) (*bq.Collector, error) {
 	queryBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -69,22 +72,24 @@ func createCollector(typeName, filename string, refresh time.Duration) (*bq.Coll
 		v = prometheus.UntypedValue
 	}
 
+	// TODO: use to text/template
 	query := string(queryBytes)
-	query = strings.Replace(query, "UNIX_START_TIME", fmt.Sprintf("%d", time.Now().UTC().Unix()), -1)
-	query = strings.Replace(query, "REFRESH_RATE_SEC", fmt.Sprintf("%d", int(refresh.Seconds())), -1)
+	query = strings.Replace(query, "UNIX_START_TIME", vars["UNIX_START_TIME"], -1)
+	query = strings.Replace(query, "REFRESH_RATE_SEC", vars["REFRESH_RATE_SEC"], -1)
 
 	c := bq.NewCollector(bq.NewQueryRunner(client), v, fileToMetric(filename), string(query))
 
 	return c, nil
 }
 
-func updatePeriodically(collectors, unregistered []*bq.Collector, refresh time.Duration) {
-	var registered = []*bq.Collector{}
+// updatePeriodically
+func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) {
+	var collectors = []*bq.Collector{}
 
+	// Attempt to register all unregistered collectors.
 	if len(unregistered) > 0 {
+		collectors = append(collectors, tryRegister(unregistered)...)
 	}
-	tryRegister(unregistered)
-		err := prometheus.Register(c)
 
 	for sleepUntilNext(refresh); ; sleepUntilNext(refresh) {
 		log.Printf("Starting a new round at: %s", time.Now())
@@ -93,33 +98,59 @@ func updatePeriodically(collectors, unregistered []*bq.Collector, refresh time.D
 			collectors[i].Update()
 			log.Printf("Done")
 		}
+		if len(unregistered) > 0 {
+			collectors = append(collectors, tryRegister(unregistered)...)
+		}
 	}
 }
 
-func tryRegister(unregistered []*bq.Collector) error {
-		// Attempt to register collector. If it fails, retry later.
+// tryRegister
+func tryRegister(unregistered chan *bq.Collector) []*bq.Collector {
+	var registered = []*bq.Collector{}
+	count := len(unregistered)
+	for i := 0; i < count; i++ {
+		// Take collector off of channel.
+		c := <-unregistered
+
+		// Try to register this collector.
+		err := prometheus.Register(c)
+		if err != nil {
+			// Registration failed, so place collector back on channel.
+			unregistered <- c
+			continue
+		}
+		log.Printf("Registered %s", c)
+		registered = append(registered, c)
 	}
+	return registered
 }
 
 func main() {
 	flag.Parse()
-	var unregistered = []*bq.Collector{}
 
 	if len(querySources) != len(valueTypes) {
 		log.Fatal("You must provide a --type flag for every --query source.")
 	}
 
+	// Create a channel with capacity for all collectors.
+	unregistered := make(chan *bq.Collector, len(querySources))
+
+	vars := map[string]string{
+		"UNIX_START_TIME":  fmt.Sprintf("%d", time.Now().UTC().Unix()),
+		"REFRESH_RATE_SEC": fmt.Sprintf("%d", int(refresh.Seconds())),
+	}
 	for i := range querySources {
-		c, err := createCollector(valueTypes[i], querySources[i], *refresh)
+		c, err := createCollector(querySources[i], valueTypes[i], vars)
 		if err != nil {
 			log.Printf("Failed to create collector %s: %s", querySources[i], err)
 			continue
 		}
-		unregistered = append(unregistered, c)
+		// Store collector in channel.
+		unregistered <- c
 	}
 
 	go updatePeriodically(unregistered, *refresh)
 
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(":9393", nil))
+	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
