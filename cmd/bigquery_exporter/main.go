@@ -1,4 +1,8 @@
-// bigquery_exporter
+// bigquery_exporter runs structured bigquery SQL and converts the results into
+// prometheus metrics. bigquery_exporter can process multiple queries.
+// Because BigQuery queries can have long run times and high cost, Query results
+// are cached and updated every refresh interval, not on every scrape of
+// prometheus metrics.
 package main
 
 import (
@@ -41,21 +45,6 @@ func init() {
 func sleepUntilNext(d time.Duration) {
 	next := time.Now().Truncate(d).Add(d)
 	time.Sleep(time.Until(next))
-}
-
-type sleepDelay struct {
-	dur time.Duration
-}
-
-// d := sleepDelay{*refresh}
-// time.Sleep(d.Next(time.Now()))
-// sleepUntilNext(*refresh)
-func (d *delay) Next(t time.Time) time.Duration {
-	return time.Until(t.Truncate(d.dur).Add(d.dur))
-}
-
-func untilNext(d time.Duration) time.Duration {
-	return time.Until(time.Now().Truncate(d).Add(d))
 }
 
 // fileToMetric extracts the base file name to use as a prometheus metric name.
