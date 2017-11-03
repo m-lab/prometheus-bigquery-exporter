@@ -30,7 +30,7 @@ var (
 	querySources = []string{}
 	project      = flag.String("project", "", "GCP project name.")
 	port         = flag.String("port", "9050", "Exporter port.")
-	refresh      = flag.Duration("refresh", 5*time.Minute, "Number of seconds between refreshing.")
+	refresh      = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
 func init() {
@@ -56,14 +56,8 @@ func fileToMetric(filename string) string {
 // createCollector creates a bq.Collector initialized with the BQ query
 // contained in filename. The returned collector should be registered with
 // prometheus.Register.
-func createCollector(filename, typeName string, vars map[string]string) (*bq.Collector, error) {
+func createCollector(client *bigquery.Client, filename, typeName string, vars map[string]string) (*bq.Collector, error) {
 	queryBytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx := context.Background()
-	client, err := bigquery.NewClient(ctx, *project)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +81,7 @@ func createCollector(filename, typeName string, vars map[string]string) (*bq.Col
 	return c, nil
 }
 
-// updatePeriodically runs in an infinite loop, an updates registered
+// updatePeriodically runs in an infinite loop, and updates registered
 // collectors every refresh period.
 func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) {
 	var collectors = []*bq.Collector{}
@@ -142,12 +136,18 @@ func main() {
 	// Create a channel with capacity for all collectors.
 	unregistered := make(chan *bq.Collector, len(querySources))
 
+	ctx := context.Background()
+	client, err := bigquery.NewClient(ctx, *project)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	vars := map[string]string{
 		"UNIX_START_TIME":  fmt.Sprintf("%d", time.Now().UTC().Unix()),
 		"REFRESH_RATE_SEC": fmt.Sprintf("%d", int(refresh.Seconds())),
 	}
 	for i := range querySources {
-		c, err := createCollector(querySources[i], valueTypes[i], vars)
+		c, err := createCollector(client, querySources[i], valueTypes[i], vars)
 		if err != nil {
 			log.Printf("Failed to create collector %s: %s", querySources[i], err)
 			continue
