@@ -43,6 +43,21 @@ func sleepUntilNext(d time.Duration) {
 	time.Sleep(time.Until(next))
 }
 
+type sleepDelay struct {
+	dur time.Duration
+}
+
+// d := sleepDelay{*refresh}
+// time.Sleep(d.Next(time.Now()))
+// sleepUntilNext(*refresh)
+func (d *delay) Next(t time.Time) time.Duration {
+	return time.Until(t.Truncate(d.dur).Add(d.dur))
+}
+
+func untilNext(d time.Duration) time.Duration {
+	return time.Until(time.Now().Truncate(d).Add(d))
+}
+
 // fileToMetric extracts the base file name to use as a prometheus metric name.
 func fileToMetric(filename string) string {
 	fname := filepath.Base(filename)
@@ -92,7 +107,6 @@ func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) 
 	if len(unregistered) > 0 {
 		collectors = append(collectors, tryRegister(unregistered)...)
 	}
-
 	for sleepUntilNext(refresh); ; sleepUntilNext(refresh) {
 		log.Printf("Starting a new round at: %s", time.Now())
 		for i := range collectors {
