@@ -1,3 +1,4 @@
+// bigquery_exporter
 package main
 
 import (
@@ -82,7 +83,8 @@ func createCollector(filename, typeName string, vars map[string]string) (*bq.Col
 	return c, nil
 }
 
-// updatePeriodically
+// updatePeriodically runs in an infinite loop, an updates registered
+// collectors every refresh period.
 func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) {
 	var collectors = []*bq.Collector{}
 
@@ -104,7 +106,9 @@ func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) 
 	}
 }
 
-// tryRegister
+// tryRegister attempts to prometheus.Register every bq.Collectors queued in
+// unregistered. Any collectors that fail are placed back on the channel. All
+// successfully registered collectors are returned.
 func tryRegister(unregistered chan *bq.Collector) []*bq.Collector {
 	var registered = []*bq.Collector{}
 	count := len(unregistered)
