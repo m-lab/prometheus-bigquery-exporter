@@ -14,7 +14,7 @@ before_install:
 
 script:
 # Run query "unit tests".
-- go test -v -covermode=count -coverprofile=bq.cov github.com/m-lab/prometheus-bigquery-exporter/bq
+- go test -v -short -covermode=count -coverprofile=bq.cov github.com/m-lab/prometheus-bigquery-exporter/bq
 
 # Coveralls
 - $HOME/gopath/bin/gocovmerge bq.cov > merge.cov

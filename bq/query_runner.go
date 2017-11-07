@@ -25,6 +25,11 @@ type Metric struct {
 	value  float64
 }
 
+// NewMetric creates a Metric with given values.
+func NewMetric(labels []string, values []string, value float64) Metric {
+	return Metric{labels, values, value}
+}
+
 // queryRunnerImpl is a concerete implementation of QueryRunner for BigQuery.
 type queryRunnerImpl struct {
 	client *bigquery.Client
@@ -35,17 +40,13 @@ func NewQueryRunner(client *bigquery.Client) QueryRunner {
 	return &queryRunnerImpl{client}
 }
 
-// Query executes the given query. Currently only Legacy SQL is supported. The
-// query must define a column named "value" for the value, and may define label
-// columns that use the prefix "label_".
+// Query executes the given query. Query only supports standard SQL. The
+// query must define a column named "value" for the value, and may define
+// additional columns, all of which are used as metric labels.
 func (qr *queryRunnerImpl) Query(query string) ([]Metric, error) {
 	metrics := []Metric{}
 
 	q := qr.client.Query(query)
-
-	// TODO: only use Standard SQL.
-	q.QueryConfig.UseLegacySQL = true
-
 	// TODO: add context timeout.
 	it, err := q.Read(context.Background())
 	if err != nil {
