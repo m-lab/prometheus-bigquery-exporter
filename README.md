@@ -77,3 +77,43 @@ Visit http://localhost:9393/metrics and you will find metrics like:
     ndt_test_count{machine="mlab2.foo01.measurement-lab.org"} 200
     ...
 ```
+
+
+# Testing
+
+To run the bigquery exporter locally (e.g. with a new query) you can build a
+test environment based on the google/cloud-sdk with a golang tools installed.
+
+Use the following steps:
+
+1. Build the testing docker image.
+
+```
+$ docker build -t bqe.testing -f Dockerfile.testing .
+```
+
+2. Run the testing image, with fowarded ports and shared volume. The
+   `--volumes-from` option is created automatically by the cloud-sdk base image.
+   This volume preserves credentials across runs of the docker image.
+
+```
+$ docker run -p 9050:9050 --rm -ti -v $PWD:/go/src/github.com/m-lab/prometheus-bigquery-exporter --volumes-from gcloud-config bqe.testing
+```
+
+3. Authenticate using your account. Both steps are necessary, the first to run
+   gcloud commands (which uses user credentials), the second to run the bigquery
+   exporter (which uses application default credentials).
+
+```
+# gcloud auth login
+# gcloud auth application-default login
+```
+
+4. Start the bigquery exporter.
+
+```
+go get -v github.com/m-lab/prometheus-bigquery-exporter/cmd/bigquery_exporter
+./go/bin/bigquery_exporter \
+    --project mlab-sandbox \
+    --type gauge --query <path-to-some-query-file>/bq_ndt_metrics.sql
+```
