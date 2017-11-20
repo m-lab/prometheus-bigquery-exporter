@@ -8,15 +8,23 @@ import (
 )
 
 type Collector struct {
-	runner     QueryRunner
+	// runner must be a QueryRunner instance for collecting metrics.
+	runner QueryRunner
+	// metricName is the base name for prometheus metrics created for this query.
 	metricName string
-	query      string
+	// query contains the standardSQL query.
+	query string
 
+	// valType defines whether the metric is a Gauge or Counter type.
 	valType prometheus.ValueType
-	descs   map[string]*prometheus.Desc
+	// descs maps metric suffixes to the prometheus description. These descriptions
+	// are generated once and must be stable over time.
+	descs map[string]*prometheus.Desc
 
+	// metrics caches the last set of collected results from a query.
 	metrics []Metric
-	mux     sync.Mutex
+	// mux locks access to types above.
+	mux sync.Mutex
 }
 
 // NewCollector creates a new BigQuery Collector instance.
