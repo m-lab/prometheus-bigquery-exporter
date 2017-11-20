@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"sort"
+	"strings"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/iterator"
@@ -20,14 +21,14 @@ type QueryRunner interface {
 
 // Metric holds raw data from query results needed to create a prometheus.Metric.
 type Metric struct {
-	labels []string
-	values []string
-	value  float64
+	labelKeys   []string
+	labelValues []string
+	values      map[string]float64
 }
 
 // NewMetric creates a Metric with given values.
-func NewMetric(labels []string, values []string, value float64) Metric {
-	return Metric{labels, values, value}
+func NewMetric(labelKeys []string, labelValues []string, values map[string]float64) Metric {
+	return Metric{labelKeys, labelValues, values}
 }
 
 // queryRunnerImpl is a concerete implementation of QueryRunner for BigQuery.
@@ -100,20 +101,23 @@ func valToString(v bigquery.Value) string {
 // rowToMetric converts a bigquery result row to a bq.Metric
 func rowToMetric(row map[string]bigquery.Value) Metric {
 	m := Metric{}
+	m.values = make(map[string]float64, 1)
 
 	// Note that `range` does not guarantee map key order. So, we extract label
 	// names, sort them, and then extract values.
 	for k, v := range row {
-		if k == "value" {
-			m.value = valToFloat(v)
+		if strings.HasPrefix(k, "value") {
+			// Get the value suffix used to augment the metric name. If k is
+			// "value", then the default name will just be the empty string.
+			m.values[k[5:]] = valToFloat(v)
 		} else {
-			m.labels = append(m.labels, k)
+			m.labelKeys = append(m.labelKeys, k)
 		}
 	}
-	sort.Strings(m.labels)
+	sort.Strings(m.labelKeys)
 
-	for i := range m.labels {
-		m.values = append(m.values, valToString(row[m.labels[i]]))
+	for i := range m.labelKeys {
+		m.labelValues = append(m.labelValues, valToString(row[m.labelKeys[i]]))
 	}
 	return m
 }

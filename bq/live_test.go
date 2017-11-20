@@ -28,28 +28,39 @@ func TestLiveQuery(t *testing.T) {
 		metrics []bq.Metric
 	}{
 		{
-			name:  "Single value",
+			name:  "Single row, single value",
 			query: "SELECT 1 as value",
 			metrics: []bq.Metric{
-				bq.NewMetric(nil, nil, 1.0),
+				bq.NewMetric(nil, nil, map[string]float64{"": 1.0}),
 			},
 		},
 		{
-			name:  "Single value with label",
+			name:  "Single row, single value with label",
 			query: "SELECT 'foo' as key, 2 as value",
 			metrics: []bq.Metric{
-				bq.NewMetric([]string{"key"}, []string{"foo"}, 2.0),
+				bq.NewMetric([]string{"key"}, []string{"foo"}, map[string]float64{"": 2.0}),
 			},
 		},
 		{
-			name: "Multiple values with labels",
+			name: "Multiple rows, single value with labels",
 			query: `#standardSQL
 			        SELECT key, value
 					FROM (SELECT "foo" AS key, 1 AS value UNION ALL
 					      SELECT "bar" AS key, 2 AS value);`,
 			metrics: []bq.Metric{
-				bq.NewMetric([]string{"key"}, []string{"foo"}, 1.0),
-				bq.NewMetric([]string{"key"}, []string{"bar"}, 2.0),
+				bq.NewMetric([]string{"key"}, []string{"foo"}, map[string]float64{"": 1.0}),
+				bq.NewMetric([]string{"key"}, []string{"bar"}, map[string]float64{"": 2.0}),
+			},
+		},
+		{
+			name: "Multiple rows, multiple values with labels",
+			query: `#standardSQL
+			        SELECT key, value_foo, value_bar
+					FROM (SELECT "foo" AS key, 1 AS value_foo, 3 as value_bar UNION ALL
+					      SELECT "bar" AS key, 2 AS value_foo, 4 as value_bar);`,
+			metrics: []bq.Metric{
+				bq.NewMetric([]string{"key"}, []string{"foo"}, map[string]float64{"_foo": 1.0, "_bar": 3.0}),
+				bq.NewMetric([]string{"key"}, []string{"bar"}, map[string]float64{"_foo": 2.0, "_bar": 4.0}),
 			},
 		},
 	}

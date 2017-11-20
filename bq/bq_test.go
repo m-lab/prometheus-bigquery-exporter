@@ -23,14 +23,14 @@ func (qr *fakeQueryRunner) Query(query string) ([]Metric, error) {
 func TestCollector(t *testing.T) {
 	metrics := []Metric{
 		Metric{
-			labels: []string{"key"},
-			values: []string{"thing"},
-			value:  1.1,
+			labelKeys:   []string{"key"},
+			labelValues: []string{"thing"},
+			values:      map[string]float64{"": 1.1},
 		},
 		Metric{
-			labels: []string{"key"},
-			values: []string{"thing2"},
-			value:  2.1,
+			labelKeys:   []string{"key"},
+			labelValues: []string{"thing2"},
+			values:      map[string]float64{"": 2.1},
 		},
 	}
 	expectedMetrics := []string{

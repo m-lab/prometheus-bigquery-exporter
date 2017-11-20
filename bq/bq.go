@@ -8,15 +8,23 @@ import (
 )
 
 type Collector struct {
-	runner     QueryRunner
+	// runner must be a QueryRunner instance for collecting metrics.
+	runner QueryRunner
+	// metricName is the base name for prometheus metrics created for this query.
 	metricName string
-	query      string
+	// query contains the standardSQL query.
+	query string
 
+	// valType defines whether the metric is a Gauge or Counter type.
 	valType prometheus.ValueType
-	desc    *prometheus.Desc
+	// descs maps metric suffixes to the prometheus description. These descriptions
+	// are generated once and must be stable over time.
+	descs map[string]*prometheus.Desc
 
+	// metrics caches the last set of collected results from a query.
 	metrics []Metric
-	mux     sync.Mutex
+	// mux locks access to types above.
+	mux sync.Mutex
 }
 
 // NewCollector creates a new BigQuery Collector instance.
@@ -26,7 +34,7 @@ func NewCollector(runner QueryRunner, valType prometheus.ValueType, metricName, 
 		metricName: metricName,
 		query:      query,
 		valType:    valType,
-		desc:       nil,
+		descs:      nil,
 		metrics:    nil,
 		mux:        sync.Mutex{},
 	}
@@ -35,13 +43,16 @@ func NewCollector(runner QueryRunner, valType prometheus.ValueType, metricName, 
 // Describe satisfies the prometheus.Collector interface. Describe is called
 // immediately after registering the collector.
 func (col *Collector) Describe(ch chan<- *prometheus.Desc) {
-	if col.desc == nil {
+	if col.descs == nil {
 		// TODO: collect metrics for query exec time.
+		col.descs = make(map[string]*prometheus.Desc, 1)
 		col.Update()
 		col.setDesc()
 	}
 	// NOTE: if Update returns no metrics, this will fail.
-	ch <- col.desc
+	for _, desc := range col.descs {
+		ch <- desc
+	}
 }
 
 // Collect satisfies the prometheus.Collector interface. Collect reports values
@@ -53,8 +64,10 @@ func (col *Collector) Collect(ch chan<- prometheus.Metric) {
 	col.mux.Unlock()
 
 	for i := range col.metrics {
-		ch <- prometheus.MustNewConstMetric(
-			col.desc, col.valType, metrics[i].value, metrics[i].values...)
+		for k, desc := range col.descs {
+			ch <- prometheus.MustNewConstMetric(
+				desc, col.valType, metrics[i].values[k], metrics[i].labelValues...)
+		}
 	}
 }
 
@@ -82,8 +95,10 @@ func (col *Collector) Update() error {
 func (col *Collector) setDesc() {
 	// The query may return no results.
 	if len(col.metrics) > 0 {
-		// TODO: allow passing meaningful help text.
-		col.desc = prometheus.NewDesc(col.metricName, "help text", col.metrics[0].labels, nil)
+		for k, _ := range col.metrics[0].values {
+			// TODO: allow passing meaningful help text.
+			col.descs[k] = prometheus.NewDesc(col.metricName+k, "help text", col.metrics[0].labelKeys, nil)
+		}
 	} else {
 		// TODO: this is a problem.
 		return
