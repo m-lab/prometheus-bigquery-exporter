@@ -9,10 +9,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/m-lab/go/prometheusx"
 
 	"github.com/m-lab/prometheus-bigquery-exporter/bq"
 
@@ -22,14 +23,13 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
 	valueTypes   = []string{}
 	querySources = []string{}
 	project      = flag.String("project", "", "GCP project name.")
-	port         = flag.String("port", "9050", "Exporter port.")
+	port         = flag.String("port", ":9050", "Exporter port.")
 	refresh      = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
@@ -156,8 +156,6 @@ func main() {
 		unregistered <- c
 	}
 
-	go updatePeriodically(unregistered, *refresh)
-
-	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	prometheusx.MustStartPrometheus(*port)
+	updatePeriodically(unregistered, *refresh)
 }

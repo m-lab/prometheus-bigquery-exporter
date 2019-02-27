@@ -1,7 +1,7 @@
 language: go
 
 go:
-- '1.8'
+- '1.11'
 
 # Unconditionally place the repo at GOPATH/src/${go_import_path} to support
 # forks.

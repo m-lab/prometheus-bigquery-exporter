@@ -76,7 +76,7 @@ func TestRowToMetric(t *testing.T) {
 	for _, test := range tests {
 		m := rowToMetric(test.row)
 		if !reflect.DeepEqual(m, test.metric) {
-			t.Error("Failed to convert row to metric. want %#v; got %#v", test.metric, m)
+			t.Errorf("Failed to convert row to metric. want %#v; got %#v", test.metric, m)
 		}
 	}
 }
