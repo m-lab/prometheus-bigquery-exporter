@@ -4,12 +4,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/m-lab/go/prometheusx"
+
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type fakeQueryRunner struct {
@@ -53,26 +53,26 @@ func TestCollector(t *testing.T) {
 	close(chCol)
 
 	if len(chDesc) != 1 {
-		t.Fatal("want 1 prometheus.Desc, got %d\n", len(chDesc))
+		t.Fatalf("want 1 prometheus.Desc, got %d\n", len(chDesc))
 	}
 	if len(chCol) != 2 {
-		t.Fatal("want 2 prometheus.Metric, got %d\n", len(chCol))
+		t.Fatalf("want 2 prometheus.Metric, got %d\n", len(chCol))
 	}
 
 	// Normally, we use the default registry via prometheus.Register. Using a
 	// custom registry allows us to write clearer tests.
-	reg := prometheus.NewRegistry()
-	err := reg.Register(c)
+	err := prometheus.Register(c)
+	defer prometheus.Unregister(c)
 	if err != nil {
 		t.Fatal("could not register collector.")
 	}
 
 	// Read all metrics via the prometheus handler.
-	ts := httptest.NewServer(promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	ts := prometheusx.MustStartPrometheus(":0")
 	defer ts.Close()
 
 	// Get the raw metrics from the test server handler.
-	res, err := http.Get(ts.URL)
+	res, err := http.Get("http://" + ts.Addr + "/metrics")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,8 +92,9 @@ func TestCollector(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Error("Did not find expected metric: %s", expected)
+			t.Errorf("Did not find expected metric: %s", expected)
 		}
 	}
 
+	prometheusx.LintMetrics(t)
 }
