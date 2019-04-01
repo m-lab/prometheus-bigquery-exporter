@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/m-lab/go/prometheusx"
+	"github.com/m-lab/go/prometheusx/promtest"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -96,5 +97,5 @@ func TestCollector(t *testing.T) {
 		}
 	}
 
-	prometheusx.LintMetrics(t)
+	promtest.LintMetrics(t)
 }
