@@ -86,7 +86,7 @@ func valToFloat(v bigquery.Value) float64 {
 
 // valToString coerces the bigquery.Value into a string. If the underlying type
 // is not a string, we treat it like an int64 or float64. If the underlying is
-// none of these types, valToString returns "0".
+// none of these types, valToString returns "invalid string".
 func valToString(v bigquery.Value) string {
 	var s string
 	switch v.(type) {
