@@ -9,6 +9,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/bigquery"
 	"google.golang.org/api/iterator"
@@ -85,13 +86,16 @@ func valToFloat(v bigquery.Value) float64 {
 }
 
 // valToString coerces the bigquery.Value into a string. If the underlying type
-// is not a string, we treat it like an int64 or float64. If the underlying is
-// none of these types, valToString returns "invalid string".
+// is not a string, we check against other special types such as time.Time and
+// try to convert to a string. If the underlying is none of these types, valToString
+// returns "invalid string".
 func valToString(v bigquery.Value) string {
 	var s string
 	switch v.(type) {
 	case string:
 		s = v.(string)
+	case time.Time:
+		s = v.(time.Time).String()
 	default:
 		s = "invalid string"
 	}

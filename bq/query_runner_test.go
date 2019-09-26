@@ -3,6 +3,7 @@ package bq
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/bigquery"
 )
@@ -69,6 +70,18 @@ func TestRowToMetric(t *testing.T) {
 				labelKeys:   []string{"name"},
 				labelValues: []string{"invalid string"}, // converted to a string.
 				values:      map[string]float64{"": 2.1},
+			},
+		},
+		{
+			name: "Convert time.Time type into string",
+			row: map[string]bigquery.Value{
+				"timestamp": time.Date(2019, time.September, 26, 0, 0, 0, 0, time.UTC), //
+				"value":     1.0,
+			},
+			metric: Metric{
+				labelKeys:   []string{"timestamp"},
+				labelValues: []string{"2019-09-26 00:00:00 +0000 UTC"}, // converted to a string.
+				values:      map[string]float64{"": 1.0},
 			},
 		},
 	}
