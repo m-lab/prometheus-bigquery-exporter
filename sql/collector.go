@@ -1,11 +1,32 @@
-// bq implements the prometheus.Collector interface for bigquery.
-package bq
+// Package sql implements the prometheus.Collector interface for bigquery.
+package sql
 
 import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
+
+// Metric holds raw data from query results needed to create a prometheus.Metric.
+type Metric struct {
+	LabelKeys   []string
+	LabelValues []string
+	Values      map[string]float64
+}
+
+// NewMetric creates a Metric with given values.
+func NewMetric(labelKeys []string, labelValues []string, values map[string]float64) Metric {
+	return Metric{
+		LabelKeys:   labelKeys,
+		LabelValues: labelValues,
+		Values:      values,
+	}
+}
+
+// QueryRunner defines the interface used to run a query and return an array of metrics.
+type QueryRunner interface {
+	Query(q string) ([]Metric, error)
+}
 
 type Collector struct {
 	// runner must be a QueryRunner instance for collecting metrics.
@@ -66,7 +87,7 @@ func (col *Collector) Collect(ch chan<- prometheus.Metric) {
 	for i := range col.metrics {
 		for k, desc := range col.descs {
 			ch <- prometheus.MustNewConstMetric(
-				desc, col.valType, metrics[i].values[k], metrics[i].labelValues...)
+				desc, col.valType, metrics[i].Values[k], metrics[i].LabelValues...)
 		}
 	}
 }
@@ -95,9 +116,9 @@ func (col *Collector) Update() error {
 func (col *Collector) setDesc() {
 	// The query may return no results.
 	if len(col.metrics) > 0 {
-		for k, _ := range col.metrics[0].values {
+		for k := range col.metrics[0].Values {
 			// TODO: allow passing meaningful help text.
-			col.descs[k] = prometheus.NewDesc(col.metricName+k, "help text", col.metrics[0].labelKeys, nil)
+			col.descs[k] = prometheus.NewDesc(col.metricName+k, "help text", col.metrics[0].LabelKeys, nil)
 		}
 	} else {
 		// TODO: this is a problem.
