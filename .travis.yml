@@ -1,7 +1,7 @@
 language: go
 
 go:
-- '1.11'
+- '1.12'
 
 # Unconditionally place the repo at GOPATH/src/${go_import_path} to support
 # forks.
@@ -10,12 +10,8 @@ go_import_path: github.com/m-lab/prometheus-bigquery-exporter
 
 before_install:
 - go get github.com/mattn/goveralls
-- go get github.com/wadey/gocovmerge
 
 script:
 # Run query "unit tests".
-- go test -v -short -covermode=count -coverprofile=bq.cov github.com/m-lab/prometheus-bigquery-exporter/bq
-
-# Coveralls
-- $HOME/gopath/bin/gocovmerge bq.cov > merge.cov
-- $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
+- go test -v ./... -cover=1 -coverprofile=_c.cov
+- $GOPATH/bin/goveralls -service=travis-ci -coverprofile=_c.cov
