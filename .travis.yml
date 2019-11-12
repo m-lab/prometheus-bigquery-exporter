@@ -13,5 +13,5 @@ before_install:
 
 script:
 # Run query "unit tests".
-- go test -v ./... -cover=1 -coverprofile=_c.cov
+- go test -short -v ./... -cover=1 -coverprofile=_c.cov
 - $GOPATH/bin/goveralls -service=travis-ci -coverprofile=_c.cov
