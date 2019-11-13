@@ -1,4 +1,4 @@
-package bq
+package sql
 
 import (
 	"io/ioutil"
@@ -24,14 +24,14 @@ func (qr *fakeQueryRunner) Query(query string) ([]Metric, error) {
 func TestCollector(t *testing.T) {
 	metrics := []Metric{
 		Metric{
-			labelKeys:   []string{"key"},
-			labelValues: []string{"thing"},
-			values:      map[string]float64{"": 1.1},
+			LabelKeys:   []string{"key"},
+			LabelValues: []string{"thing"},
+			Values:      map[string]float64{"": 1.1},
 		},
 		Metric{
-			labelKeys:   []string{"key"},
-			labelValues: []string{"thing2"},
-			values:      map[string]float64{"": 2.1},
+			LabelKeys:   []string{"key"},
+			LabelValues: []string{"thing2"},
+			Values:      map[string]float64{"": 2.1},
 		},
 	}
 	expectedMetrics := []string{

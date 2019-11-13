@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/m-lab/go/prometheusx"
-
-	"github.com/m-lab/prometheus-bigquery-exporter/bq"
+	"github.com/m-lab/prometheus-bigquery-exporter/query"
+	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 
 	flag "github.com/spf13/pflag"
 
@@ -53,10 +53,10 @@ func fileToMetric(filename string) string {
 	return strings.TrimSuffix(fname, filepath.Ext(fname))
 }
 
-// createCollector creates a bq.Collector initialized with the BQ query
+// createCollector creates a sql.Collector initialized with the BQ query
 // contained in filename. The returned collector should be registered with
 // prometheus.Register.
-func createCollector(client *bigquery.Client, filename, typeName string, vars map[string]string) (*bq.Collector, error) {
+func createCollector(client *bigquery.Client, filename, typeName string, vars map[string]string) (*sql.Collector, error) {
 	queryBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -72,19 +72,19 @@ func createCollector(client *bigquery.Client, filename, typeName string, vars ma
 	}
 
 	// TODO: use to text/template
-	query := string(queryBytes)
-	query = strings.Replace(query, "UNIX_START_TIME", vars["UNIX_START_TIME"], -1)
-	query = strings.Replace(query, "REFRESH_RATE_SEC", vars["REFRESH_RATE_SEC"], -1)
+	q := string(queryBytes)
+	q = strings.Replace(q, "UNIX_START_TIME", vars["UNIX_START_TIME"], -1)
+	q = strings.Replace(q, "REFRESH_RATE_SEC", vars["REFRESH_RATE_SEC"], -1)
 
-	c := bq.NewCollector(bq.NewQueryRunner(client), v, fileToMetric(filename), string(query))
+	c := sql.NewCollector(query.NewBQRunner(client), v, fileToMetric(filename), string(q))
 
 	return c, nil
 }
 
 // updatePeriodically runs in an infinite loop, and updates registered
 // collectors every refresh period.
-func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) {
-	var collectors = []*bq.Collector{}
+func updatePeriodically(unregistered chan *sql.Collector, refresh time.Duration) {
+	var collectors = []*sql.Collector{}
 
 	// Attempt to register all unregistered collectors.
 	if len(unregistered) > 0 {
@@ -103,11 +103,11 @@ func updatePeriodically(unregistered chan *bq.Collector, refresh time.Duration) 
 	}
 }
 
-// tryRegister attempts to prometheus.Register every bq.Collectors queued in
+// tryRegister attempts to prometheus.Register every sql.Collectors queued in
 // unregistered. Any collectors that fail are placed back on the channel. All
 // successfully registered collectors are returned.
-func tryRegister(unregistered chan *bq.Collector) []*bq.Collector {
-	var registered = []*bq.Collector{}
+func tryRegister(unregistered chan *sql.Collector) []*sql.Collector {
+	var registered = []*sql.Collector{}
 	count := len(unregistered)
 	for i := 0; i < count; i++ {
 		// Take collector off of channel.
@@ -134,7 +134,7 @@ func main() {
 	}
 
 	// Create a channel with capacity for all collectors.
-	unregistered := make(chan *bq.Collector, len(querySources))
+	unregistered := make(chan *sql.Collector, len(querySources))
 
 	ctx := context.Background()
 	client, err := bigquery.NewClient(ctx, *project)
