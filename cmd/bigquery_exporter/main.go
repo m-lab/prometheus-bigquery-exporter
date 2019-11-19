@@ -6,18 +6,21 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/m-lab/go/flagx"
 	"github.com/m-lab/go/prometheusx"
+	"github.com/m-lab/go/rtx"
+	"github.com/m-lab/prometheus-bigquery-exporter/internal/setup"
 	"github.com/m-lab/prometheus-bigquery-exporter/query"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
-
-	flag "github.com/spf13/pflag"
 
 	"cloud.google.com/go/bigquery"
 	"golang.org/x/net/context"
@@ -26,17 +29,19 @@ import (
 )
 
 var (
-	valueTypes   = []string{}
-	querySources = []string{}
-	project      = flag.String("project", "", "GCP project name.")
-	port         = flag.String("port", ":9050", "Exporter port.")
-	refresh      = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
+	counterSources = flagx.StringArray{}
+	gaugeSources   = flagx.StringArray{}
+	project        = flag.String("project", "", "GCP project name.")
+	refresh        = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
 func init() {
-	flag.StringArrayVar(&valueTypes, "type", nil, "Name of the prometheus value type, e.g. 'counter' or 'gauge'.")
-	flag.StringArrayVar(&querySources, "query", nil, "Name of file with query string.")
+	// TODO: support counter queries.
+	// flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
+	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
 
+	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
+	*prometheusx.ListenAddress = ":9348"
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
@@ -53,109 +58,69 @@ func fileToMetric(filename string) string {
 	return strings.TrimSuffix(fname, filepath.Ext(fname))
 }
 
-// createCollector creates a sql.Collector initialized with the BQ query
-// contained in filename. The returned collector should be registered with
-// prometheus.Register.
-func createCollector(client *bigquery.Client, filename, typeName string, vars map[string]string) (*sql.Collector, error) {
+// fileToQuery reads the content of the given file and returns the query with template values repalced with those in vars.
+func fileToQuery(filename string, vars map[string]string) string {
 	queryBytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
+	rtx.Must(err, "Failed to open %q", filename)
 
-	var v prometheus.ValueType
-	if typeName == "counter" {
-		v = prometheus.CounterValue
-	} else if typeName == "gauge" {
-		v = prometheus.GaugeValue
-	} else {
-		v = prometheus.UntypedValue
-	}
-
-	// TODO: use to text/template
 	q := string(queryBytes)
 	q = strings.Replace(q, "UNIX_START_TIME", vars["UNIX_START_TIME"], -1)
 	q = strings.Replace(q, "REFRESH_RATE_SEC", vars["REFRESH_RATE_SEC"], -1)
-
-	c := sql.NewCollector(query.NewBQRunner(client), v, fileToMetric(filename), string(q))
-
-	return c, nil
+	return q
 }
 
-// updatePeriodically runs in an infinite loop, and updates registered
-// collectors every refresh period.
-func updatePeriodically(unregistered chan *sql.Collector, refresh time.Duration) {
-	var collectors = []*sql.Collector{}
+func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[string]string) {
+	var wg sync.WaitGroup
+	for i := range files {
+		wg.Add(1)
+		go func(f *setup.File) {
+			modified, err := f.IsModified()
+			if modified && err == nil {
+				c := sql.NewCollector(
+					newRunner(client), prometheus.GaugeValue,
+					fileToMetric(f.Name), fileToQuery(f.Name, vars))
 
-	// Attempt to register all unregistered collectors.
-	if len(unregistered) > 0 {
-		collectors = append(collectors, tryRegister(unregistered)...)
+				log.Println("Registering:", fileToMetric(f.Name))
+				err = f.Register(c)
+			} else {
+				log.Println("Updating:", fileToMetric(f.Name))
+				err = f.Update()
+			}
+			if err != nil {
+				log.Println(err)
+			}
+			wg.Done()
+		}(&files[i])
 	}
-	for sleepUntilNext(refresh); ; sleepUntilNext(refresh) {
-		log.Printf("Starting a new round at: %s", time.Now())
-		for i := range collectors {
-			log.Printf("Running query for %s", collectors[i])
-			collectors[i].Update()
-			log.Printf("Done")
-		}
-		if len(unregistered) > 0 {
-			collectors = append(collectors, tryRegister(unregistered)...)
-		}
-	}
+	wg.Wait()
 }
 
-// tryRegister attempts to prometheus.Register every sql.Collectors queued in
-// unregistered. Any collectors that fail are placed back on the channel. All
-// successfully registered collectors are returned.
-func tryRegister(unregistered chan *sql.Collector) []*sql.Collector {
-	var registered = []*sql.Collector{}
-	count := len(unregistered)
-	for i := 0; i < count; i++ {
-		// Take collector off of channel.
-		c := <-unregistered
-
-		// Try to register this collector.
-		err := prometheus.Register(c)
-		if err != nil {
-			// Registration failed, so place collector back on channel.
-			unregistered <- c
-			continue
-		}
-		log.Printf("Registered %s", c)
-		registered = append(registered, c)
-	}
-	return registered
+var mainCtx, mainCancel = context.WithCancel(context.Background())
+var newRunner = func(client *bigquery.Client) sql.QueryRunner {
+	return query.NewBQRunner(client)
 }
 
 func main() {
 	flag.Parse()
+	rtx.Must(flagx.ArgsFromEnv(flag.CommandLine), "Could not get args from env")
 
-	if len(querySources) != len(valueTypes) {
-		log.Fatal("You must provide a --type flag for every --query source.")
+	srv := prometheusx.MustServeMetrics()
+	defer srv.Shutdown(mainCtx)
+
+	files := make([]setup.File, len(gaugeSources))
+	for i := range files {
+		files[i].Name = gaugeSources[i]
 	}
 
-	// Create a channel with capacity for all collectors.
-	unregistered := make(chan *sql.Collector, len(querySources))
-
-	ctx := context.Background()
-	client, err := bigquery.NewClient(ctx, *project)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	client, err := bigquery.NewClient(mainCtx, *project)
+	rtx.Must(err, "Failed to allocate a new bigquery.Client")
 	vars := map[string]string{
 		"UNIX_START_TIME":  fmt.Sprintf("%d", time.Now().UTC().Unix()),
 		"REFRESH_RATE_SEC": fmt.Sprintf("%d", int(refresh.Seconds())),
 	}
-	for i := range querySources {
-		c, err := createCollector(client, querySources[i], valueTypes[i], vars)
-		if err != nil {
-			log.Printf("Failed to create collector %s: %s", querySources[i], err)
-			continue
-		}
-		// Store collector in channel.
-		unregistered <- c
-	}
 
-	prometheusx.MustStartPrometheus(*port)
-	updatePeriodically(unregistered, *refresh)
+	for mainCtx.Err() == nil {
+		reloadRegisterUpdate(client, files, vars)
+		sleepUntilNext(*refresh)
+	}
 }
