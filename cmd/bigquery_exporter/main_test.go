@@ -46,7 +46,6 @@ func (f *fakeRunner) Query(query string) ([]sql.Metric, error) {
 }
 
 func Test_main(t *testing.T) {
-
 	tmp, err := ioutil.TempFile("", "empty_query_*")
 	rtx.Must(err, "Failed to create temp file for main test.")
 	defer os.Remove(tmp.Name())
