@@ -2,6 +2,7 @@
 package sql
 
 import (
+	"log"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,6 +29,7 @@ type QueryRunner interface {
 	Query(q string) ([]Metric, error)
 }
 
+// Collector manages a prometheus.Collector for queries performed by a QueryRunner.
 type Collector struct {
 	// runner must be a QueryRunner instance for collecting metrics.
 	runner QueryRunner
@@ -67,7 +69,10 @@ func (col *Collector) Describe(ch chan<- *prometheus.Desc) {
 	if col.descs == nil {
 		// TODO: collect metrics for query exec time.
 		col.descs = make(map[string]*prometheus.Desc, 1)
-		col.Update()
+		err := col.Update()
+		if err != nil {
+			log.Println(err)
+		}
 		col.setDesc()
 	}
 	// NOTE: if Update returns no metrics, this will fail.
@@ -120,8 +125,5 @@ func (col *Collector) setDesc() {
 			// TODO: allow passing meaningful help text.
 			col.descs[k] = prometheus.NewDesc(col.metricName+k, "help text", col.metrics[0].LabelKeys, nil)
 		}
-	} else {
-		// TODO: this is a problem.
-		return
 	}
 }
