@@ -37,8 +37,8 @@ func (f *File) IsModified() (bool, error) {
 }
 
 // Register the given collector. If a collector was previously registered with
-// this file, then it is unregistered first. If either registration or unregister fails, then the error is returned.
-// NOTE: it is possible
+// this file, then it is unregistered first. If either registration or
+// unregister fails, then the error is returned.
 func (f *File) Register(c *sql.Collector) error {
 	if f.c != nil {
 		ok := prometheus.Unregister(f.c)
