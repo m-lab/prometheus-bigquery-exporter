@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"testing"
 	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 )
 
@@ -44,6 +46,11 @@ func (f *fakeRunner) Query(query string) ([]sql.Metric, error) {
 }
 
 func Test_main(t *testing.T) {
+
+	tmp, err := ioutil.TempFile("", "empty_query_*")
+	rtx.Must(err, "Failed to create temp file for main test.")
+	defer os.Remove(tmp.Name())
+
 	// Provide coverage of the original newRunner definition.
 	newRunner(nil)
 
@@ -55,7 +62,7 @@ func Test_main(t *testing.T) {
 
 	// Set the refresh period to a very small delay.
 	*refresh = time.Second
-	gaugeSources.Set("testdata/test.query")
+	gaugeSources.Set(tmp.Name())
 
 	// Reset mainCtx to timeout after a second.
 	mainCtx, mainCancel = context.WithTimeout(mainCtx, time.Second)
