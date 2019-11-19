@@ -87,7 +87,7 @@ func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[
 				err = f.Update()
 			}
 			if err != nil {
-				log.Println(err)
+				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
 		}(&files[i])
