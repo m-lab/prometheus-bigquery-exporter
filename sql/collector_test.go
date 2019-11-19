@@ -1,15 +1,16 @@
 package sql
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/prometheusx/promtest"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -19,6 +20,15 @@ type fakeQueryRunner struct {
 
 func (qr *fakeQueryRunner) Query(query string) ([]Metric, error) {
 	return qr.metrics, nil
+}
+
+type errorQueryRunner struct {
+	count int
+}
+
+func (qr *errorQueryRunner) Query(query string) ([]Metric, error) {
+	qr.count++
+	return nil, fmt.Errorf("Fake query error")
 }
 
 func TestCollector(t *testing.T) {
@@ -96,6 +106,30 @@ func TestCollector(t *testing.T) {
 			t.Errorf("Did not find expected metric: %s", expected)
 		}
 	}
-
 	promtest.LintMetrics(t)
+}
+
+func TestNewCollector(t *testing.T) {
+	r := &errorQueryRunner{}
+	c := NewCollector(r, prometheus.GaugeValue, "metric_name", "")
+	if c.String() != "metric_name" {
+		t.Errorf("NewCollector().String() got %q, want 'metric_name'", c.String())
+	}
+	reg := prometheus.NewRegistry()
+	reg.Register(c)
+	if r.count != 1 {
+		t.Errorf("NewCollector() expected an error on Register")
+	}
+}
+
+func TestNewMetric(t *testing.T) {
+	m := NewMetric([]string{"a"}, []string{"b"}, map[string]float64{"val": 1.23})
+	want := Metric{
+		LabelKeys:   []string{"a"},
+		LabelValues: []string{"b"},
+		Values:      map[string]float64{"val": 1.23},
+	}
+	if !reflect.DeepEqual(m, want) {
+		t.Errorf("NewMetric() = %v, want %v", m, want)
+	}
 }

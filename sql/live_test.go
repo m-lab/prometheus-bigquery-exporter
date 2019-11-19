@@ -18,7 +18,7 @@ func TestLiveQuery(t *testing.T) {
 		t.Skip("Skipping live query tests.")
 	}
 	ctx := context.Background()
-	client, err := bigquery.NewClient(ctx, "mlab-sandbox")
+	client, err := bigquery.NewClient(ctx, "measurement-lab")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,5 +75,4 @@ func TestLiveQuery(t *testing.T) {
 			t.Errorf("Metrics do not match:\nwant %#v;\n got %#v", test.metrics, metrics)
 		}
 	}
-
 }
