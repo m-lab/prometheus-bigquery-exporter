@@ -1,4 +1,6 @@
 # prometheus-bigquery-exporter
+[![Version](https://img.shields.io/github/tag/m-lab/prometheus-bigquery-exporter.svg)](https://github.com/m-lab/prometheus-bigquery-exporter/releases) [![Build Status](https://travis-ci.org/m-lab/prometheus-bigquery-exporter.svg?branch=master)](https://travis-ci.org/m-lab/prometheus-bigquery-exporter) [![Coverage Status](https://coveralls.io/repos/m-lab/prometheus-bigquery-exporter/badge.svg?branch=master)](https://coveralls.io/github/m-lab/prometheus-bigquery-exporter?branch=master) [![GoDoc](https://godoc.org/github.com/m-lab/prometheus-bigquery-exporter?status.svg)](https://godoc.org/github.com/m-lab/prometheus-bigquery-exporter) [![Go Report Card](https://goreportcard.com/badge/github.com/m-lab/prometheus-bigquery-exporter)](https://goreportcard.com/report/github.com/m-lab/prometheus-bigquery-exporter) 
+
 An exporter for converting BigQuery results into Prometheus metrics.
 
 # Limitations
