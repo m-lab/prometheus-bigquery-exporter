@@ -4,26 +4,32 @@
 package query
 
 import (
-	"context"
-	"log"
 	"math"
 	"sort"
 	"strings"
 
-	"github.com/m-lab/prometheus-bigquery-exporter/sql"
-
 	"cloud.google.com/go/bigquery"
-	"google.golang.org/api/iterator"
+	"github.com/m-lab/prometheus-bigquery-exporter/query/bqiface"
+	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 )
 
 // BQRunner is a concerete implementation of QueryRunner for BigQuery.
 type BQRunner struct {
-	client *bigquery.Client
+	runner runner
+}
+
+// runner interface allows unit testing of the Query function.
+type runner interface {
+	Query(q string, visit func(row map[string]bigquery.Value) error) error
 }
 
 // NewBQRunner creates a new QueryRunner instance.
 func NewBQRunner(client *bigquery.Client) *BQRunner {
-	return &BQRunner{client}
+	return &BQRunner{
+		runner: &bqiface.BigQueryImpl{
+			Client: client,
+		},
+	}
 }
 
 // Query executes the given query. Query only supports standard SQL. The
@@ -31,26 +37,12 @@ func NewBQRunner(client *bigquery.Client) *BQRunner {
 // additional columns, all of which are used as metric labels.
 func (qr *BQRunner) Query(query string) ([]sql.Metric, error) {
 	metrics := []sql.Metric{}
-
-	q := qr.client.Query(query)
-	// TODO: add context timeout.
-	it, err := q.Read(context.Background())
-	if err != nil {
-		log.Print(err)
-		return nil, err
-	}
-
-	for {
-		var row map[string]bigquery.Value
-		err := it.Next(&row)
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Printf("%#v %d", err, len(metrics))
-			return nil, err
-		}
+	err := qr.runner.Query(query, func(row map[string]bigquery.Value) error {
 		metrics = append(metrics, rowToMetric(row))
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return metrics, nil
 }
