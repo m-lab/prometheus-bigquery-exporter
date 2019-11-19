@@ -2,6 +2,7 @@ package setup
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
@@ -30,7 +31,7 @@ func (f *File) IsModified() (bool, error) {
 	}
 	curr, err := fs.Stat(f.Name)
 	if err != nil {
-		// TODO: best way to handle this?
+		log.Printf("Failed to stat %q: %v", f.Name, err)
 		return false, err
 	}
 	return curr.ModTime().After(f.stat.ModTime()), nil
