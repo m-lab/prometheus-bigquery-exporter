@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/GoogleCloudPlatform/google-cloud-go-testing/bigquery/bqiface"
 	"google.golang.org/api/iterator"
 )
 
 type BigQueryImpl struct {
-	Client *bigquery.Client
+	bqiface.Client
 }
 
 func (b *BigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) error {

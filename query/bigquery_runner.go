@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/bigquery"
+	adapt "github.com/GoogleCloudPlatform/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/m-lab/prometheus-bigquery-exporter/query/bqiface"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 )
@@ -27,7 +28,7 @@ type runner interface {
 func NewBQRunner(client *bigquery.Client) *BQRunner {
 	return &BQRunner{
 		runner: &bqiface.BigQueryImpl{
-			Client: client,
+			Client: adapt.AdaptClient(client),
 		},
 	}
 }
