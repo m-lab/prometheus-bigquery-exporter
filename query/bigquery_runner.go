@@ -4,14 +4,39 @@
 package query
 
 import (
+	"context"
 	"math"
 	"sort"
 	"strings"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/m-lab/prometheus-bigquery-exporter/query/bqiface"
+	"github.com/GoogleCloudPlatform/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
+	"google.golang.org/api/iterator"
 )
+
+type bigQueryImpl struct {
+	bqiface.Client
+}
+
+func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) error {
+	q := b.Client.Query(query)
+	it, err := q.Read(context.Background())
+	if err != nil {
+		return err
+	}
+	var row map[string]bigquery.Value
+	for err = it.Next(&row); err == nil; err = it.Next(&row) {
+		err2 := visit(row)
+		if err2 != nil {
+			return err2
+		}
+	}
+	if err != iterator.Done {
+		return err
+	}
+	return nil
+}
 
 // BQRunner is a concerete implementation of QueryRunner for BigQuery.
 type BQRunner struct {
@@ -26,8 +51,8 @@ type runner interface {
 // NewBQRunner creates a new QueryRunner instance.
 func NewBQRunner(client *bigquery.Client) *BQRunner {
 	return &BQRunner{
-		runner: &bqiface.BigQueryImpl{
-			Client: client,
+		runner: &bigQueryImpl{
+			Client: bqiface.AdaptClient(client),
 		},
 	}
 }
