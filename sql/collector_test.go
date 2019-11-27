@@ -33,12 +33,12 @@ func (qr *errorQueryRunner) Query(query string) ([]Metric, error) {
 
 func TestCollector(t *testing.T) {
 	metrics := []Metric{
-		Metric{
+		{
 			LabelKeys:   []string{"key"},
 			LabelValues: []string{"thing"},
 			Values:      map[string]float64{"": 1.1},
 		},
-		Metric{
+		{
 			LabelKeys:   []string{"key"},
 			LabelValues: []string{"thing2"},
 			Values:      map[string]float64{"": 2.1},
