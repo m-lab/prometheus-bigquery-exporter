@@ -103,7 +103,7 @@ func (col *Collector) String() string {
 }
 
 // Update runs the collector query and atomically updates the cached metrics.
-// Update is called automaticlly after the collector is registered.
+// Update is called automatically after the collector is registered.
 func (col *Collector) Update() error {
 	metrics, err := col.runner.Query(col.query)
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -20,7 +19,7 @@ import (
 )
 
 func init() {
-	log.SetOutput(ioutil.Discard)
+	//log.SetOutput(ioutil.Discard)
 }
 
 type fakeRunner struct {
@@ -46,12 +45,12 @@ func (f *fakeRunner) Query(query string) ([]sql.Metric, error) {
 }
 
 func Test_main(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping live client init tests.")
+	}
 	tmp, err := ioutil.TempFile("", "empty_query_*")
 	rtx.Must(err, "Failed to create temp file for main test.")
-	defer os.Remove(tmp.Name())
-
-	// Provide coverage of the original newRunner definition.
-	newRunner(nil)
+	defer rtx.Must(os.Remove(tmp.Name()), "Remove failed")
 
 	// Create a fake runner for the test.
 	f := &fakeRunner{}
@@ -61,7 +60,7 @@ func Test_main(t *testing.T) {
 
 	// Set the refresh period to a very small delay.
 	*refresh = time.Second
-	gaugeSources.Set(tmp.Name())
+	rtx.Must(gaugeSources.Set(tmp.Name()), "failed to set gauge")
 
 	// Reset mainCtx to timeout after a second.
 	mainCtx, mainCancel = context.WithTimeout(mainCtx, time.Second)

@@ -5,23 +5,44 @@ package query
 
 import (
 	"context"
+	"errors"
+	"log"
 	"math"
 	"sort"
 	"strings"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 	"google.golang.org/api/iterator"
 )
 
 type bigQueryImpl struct {
-	bqiface.Client
+	bigquery.Client
 }
 
 func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) error {
+	ctx := context.Background()
+
 	q := b.Client.Query(query)
-	it, err := q.Read(context.Background())
+
+	job, err := q.Run(ctx)
+	if err != nil {
+		return err
+	}
+
+	js, err := job.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
+	var it *bigquery.RowIterator
+
+	if js.Statistics.NumChildJobs > 0 {
+		it, err = queryChildren(ctx, job)
+	} else {
+		it, err = job.Read(ctx)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -38,7 +59,28 @@ func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Va
 	return nil
 }
 
-// BQRunner is a concerete implementation of QueryRunner for BigQuery.
+func queryChildren(ctx context.Context, job *bigquery.Job) (*bigquery.RowIterator, error) {
+	var childJobs []*bigquery.Job
+
+	it := job.Children(ctx)
+	for {
+		job, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		childJobs = append(childJobs, job)
+	}
+	if len(childJobs) == 0 {
+		return nil, errors.New("could not find any child jobs despite having them")
+	}
+
+	return childJobs[0].Read(ctx)
+}
+
+// BQRunner is a concrete implementation of QueryRunner for BigQuery.
 type BQRunner struct {
 	runner runner
 }
@@ -52,13 +94,13 @@ type runner interface {
 func NewBQRunner(client *bigquery.Client) *BQRunner {
 	return &BQRunner{
 		runner: &bigQueryImpl{
-			Client: bqiface.AdaptClient(client),
+			Client: *client,
 		},
 	}
 }
 
 // Query executes the given query. Query only supports standard SQL. The
-// query must define a column named "value" for the value, and may define
+// query must define a column prefixed with "value" for the value(s), and may define
 // additional columns, all of which are used as metric labels.
 func (qr *BQRunner) Query(query string) ([]sql.Metric, error) {
 	metrics := []sql.Metric{}
@@ -76,12 +118,16 @@ func (qr *BQRunner) Query(query string) ([]sql.Metric, error) {
 // underlying type. If the type is not int64, float64, then valToFloat returns
 // zero.
 func valToFloat(v bigquery.Value) float64 {
+	if v == nil {
+		return 0
+	}
 	switch v.(type) {
 	case int64:
 		return (float64)(v.(int64))
 	case float64:
 		return v.(float64)
 	default:
+		log.Printf("Unrecognized value format: %T", v)
 		return math.NaN()
 	}
 }
