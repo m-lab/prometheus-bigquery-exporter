@@ -38,10 +38,8 @@ var (
 func init() {
 	// TODO: support counter queries.
 	// flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
-	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
+	flag.Var(&gaugeSources, "gauge-query", "Comma-separated names of files containing the gauge query.")
 
-	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
-	*prometheusx.ListenAddress = ":9348"
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
