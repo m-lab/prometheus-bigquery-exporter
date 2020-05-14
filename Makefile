@@ -10,6 +10,7 @@ vet:
 	@$(GO) vet $(pkgs)
 
 build:
+	@$(GO) get -t .
 	@$(GO) build
 
 docker:
