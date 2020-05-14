@@ -7,7 +7,7 @@ RUN make
 
 FROM quay.io/prometheus/busybox:glibc
 
-COPY --from=builder /go/src/github.com/m-lab/prometheus-bigquery-exporter/prometheus-bigquery-exporter /bin/prometheus-bigquery-exporter
+COPY --from=builder /go/bin/prometheus-bigquery-exporter /bin/prometheus-bigquery-exporter
 
 EXPOSE 9348
 

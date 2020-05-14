@@ -11,7 +11,6 @@ vet:
 
 build:
 	@$(GO) get -t .
-	@$(GO) build
 
 docker:
 	@echo ">> building docker image"
