@@ -1,4 +1,4 @@
-FROM quay.io/prometheus/golang-builder as builder
+FROM quay.io/prometheus/golang-builder:1.14.2-main as builder
 
 ADD . /go/src/github.com/m-lab/prometheus-bigquery-exporter
 WORKDIR /go/src/github.com/m-lab/prometheus-bigquery-exporter
