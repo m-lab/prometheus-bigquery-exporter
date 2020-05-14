@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/GoogleCloudPlatform/google-cloud-go-testing/bigquery/bqiface"
+	"github.com/googleapis/google-cloud-go-testing/bigquery/bqiface"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 	"google.golang.org/api/iterator"
 )
