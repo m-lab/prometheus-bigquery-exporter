@@ -37,7 +37,7 @@ var (
 
 func init() {
 	// TODO: support counter queries.
-	// flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
+	flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
 	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
 
 	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
@@ -69,9 +69,9 @@ func fileToQuery(filename string, vars map[string]string) string {
 	return q
 }
 
-func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[string]string) {
+func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string) {
 	var wg sync.WaitGroup
-	for i := range files {
+	for i := range GaugeFiles {
 		wg.Add(1)
 		go func(f *setup.File) {
 			modified, err := f.IsModified()
@@ -90,7 +90,29 @@ func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&files[i])
+		}(&GaugeFiles[i])
+	}
+	wg.Wait()
+	for i := range CounterFiles {
+		wg.Add(1)
+		go func(f *setup.File) {
+			modified, err := f.IsModified()
+			if modified && err == nil {
+				c := sql.NewCollector(
+					newRunner(client), prometheus.CounterValue,
+					fileToMetric(f.Name), fileToQuery(f.Name, vars))
+
+				log.Println("Registering:", fileToMetric(f.Name))
+				err = f.Register(c)
+			} else {
+				log.Println("Updating:", fileToMetric(f.Name))
+				err = f.Update()
+			}
+			if err != nil {
+				log.Println("Error:", f.Name, err)
+			}
+			wg.Done()
+		}(&CounterFiles[i])
 	}
 	wg.Wait()
 }
@@ -107,9 +129,14 @@ func main() {
 	srv := prometheusx.MustServeMetrics()
 	defer srv.Shutdown(mainCtx)
 
-	files := make([]setup.File, len(gaugeSources))
-	for i := range files {
-		files[i].Name = gaugeSources[i]
+	GaugeFiles := make([]setup.File, len(gaugeSources))
+	for i := range GaugeFiles {
+		GaugeFiles[i].Name = gaugeSources[i]
+	}
+
+	CounterFiles := make([]setup.File, len(counterSources))
+	for i := range CounterFiles {
+		CounterFiles[i].Name = counterSources[i]
 	}
 
 	client, err := bigquery.NewClient(mainCtx, *project)
@@ -120,7 +147,7 @@ func main() {
 	}
 
 	for mainCtx.Err() == nil {
-		reloadRegisterUpdate(client, files, vars)
+		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars)
 		sleepUntilNext(*refresh)
 	}
 }
