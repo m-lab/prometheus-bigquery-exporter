@@ -37,7 +37,7 @@ var (
 
 func init() {
 	// TODO: support counter queries.
-	// flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
+	flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
 	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
 
 	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
@@ -69,7 +69,7 @@ func fileToQuery(filename string, vars map[string]string) string {
 	return q
 }
 
-func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[string]string) {
+func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, filesCounter []setup.File, vars map[string]string) {
 	var wg sync.WaitGroup
 	for i := range files {
 		wg.Add(1)
@@ -93,6 +93,28 @@ func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[
 		}(&files[i])
 	}
 	wg.Wait()
+	for i := range filesCounter {
+		wg.Add(1)
+		go func(f *setup.File) {
+			modified, err := f.IsModified()
+			if modified && err == nil {
+				c := sql.NewCollector(
+					newRunner(client), prometheus.CounterValue,
+					fileToMetric(f.Name), fileToQuery(f.Name, vars))
+
+				log.Println("Registering:", fileToMetric(f.Name))
+				err = f.Register(c)
+			} else {
+				log.Println("Updating:", fileToMetric(f.Name))
+				err = f.Update()
+			}
+			if err != nil {
+				log.Println("Error:", f.Name, err)
+			}
+			wg.Done()
+		}(&filesCounter[i])
+	}
+	wg.Wait()
 }
 
 var mainCtx, mainCancel = context.WithCancel(context.Background())
@@ -112,6 +134,11 @@ func main() {
 		files[i].Name = gaugeSources[i]
 	}
 
+	filesCounter := make([]setup.File, len(counterSources))
+	for i := range filesCounter {
+		filesCounter[i].Name = counterSources[i]
+	}
+
 	client, err := bigquery.NewClient(mainCtx, *project)
 	rtx.Must(err, "Failed to allocate a new bigquery.Client")
 	vars := map[string]string{
@@ -120,7 +147,7 @@ func main() {
 	}
 
 	for mainCtx.Err() == nil {
-		reloadRegisterUpdate(client, files, vars)
+		reloadRegisterUpdate(client, files, filesCounter, vars)
 		sleepUntilNext(*refresh)
 	}
 }
