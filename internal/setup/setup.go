@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/m-lab/go/logx"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/afero"
@@ -26,6 +27,7 @@ func (f *File) IsModified() (bool, error) {
 	var err error
 	if f.stat == nil {
 		f.stat, err = fs.Stat(f.Name)
+		logx.Debug.Println("IsModified:stat1:", f.Name, err)
 		// Return true on the first successful Stat(), or the error otherwise.
 		return err == nil, err
 	}
@@ -34,7 +36,13 @@ func (f *File) IsModified() (bool, error) {
 		log.Printf("Failed to stat %q: %v", f.Name, err)
 		return false, err
 	}
-	return curr.ModTime().After(f.stat.ModTime()), nil
+	logx.Debug.Println("IsModified:stat2:", f.Name, curr.ModTime(), f.stat.ModTime(), curr.ModTime().After(f.stat.ModTime()))
+	modified := curr.ModTime().After(f.stat.ModTime())
+	if modified {
+		// Update the stat cache to the latest version.
+		f.stat = curr
+	}
+	return modified, nil
 }
 
 // Register the given collector. If a collector was previously registered with
@@ -43,6 +51,7 @@ func (f *File) IsModified() (bool, error) {
 func (f *File) Register(c *sql.Collector) error {
 	if f.c != nil {
 		ok := prometheus.Unregister(f.c)
+		logx.Debug.Println("Unregister:", ok)
 		if !ok {
 			// This is a fatal error. If the
 			return fmt.Errorf("Failed to unregister %q", f.Name)
@@ -55,6 +64,7 @@ func (f *File) Register(c *sql.Collector) error {
 		// While collector Update could fail transiently, this may be a fatal error.
 		return err
 	}
+	logx.Debug.Println("Register: success:", f.Name)
 	// Save the registered collector.
 	f.c = c
 	return nil
