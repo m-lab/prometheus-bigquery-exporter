@@ -4,6 +4,9 @@ package sql
 import (
 	"log"
 	"sync"
+	"time"
+
+	"github.com/m-lab/go/logx"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -66,6 +69,7 @@ func NewCollector(runner QueryRunner, valType prometheus.ValueType, metricName, 
 // Describe satisfies the prometheus.Collector interface. Describe is called
 // immediately after registering the collector.
 func (col *Collector) Describe(ch chan<- *prometheus.Desc) {
+	logx.Debug.Println("Describe:", time.Now())
 	if col.descs == nil {
 		// TODO: collect metrics for query exec time.
 		col.descs = make(map[string]*prometheus.Desc, 1)
@@ -84,6 +88,7 @@ func (col *Collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect satisfies the prometheus.Collector interface. Collect reports values
 // from cached metrics.
 func (col *Collector) Collect(ch chan<- prometheus.Metric) {
+	logx.Debug.Println("Collect:", time.Now())
 	col.mux.Lock()
 	// Get reference to current metrics slice to allow Update to run concurrently.
 	metrics := col.metrics
@@ -91,6 +96,7 @@ func (col *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	for i := range col.metrics {
 		for k, desc := range col.descs {
+			logx.Debug.Printf("%s labels:%#v values:%#v", col.metricName, metrics[i].LabelValues, metrics[i].Values[k])
 			ch <- prometheus.MustNewConstMetric(
 				desc, col.valType, metrics[i].Values[k], metrics[i].LabelValues...)
 		}
@@ -105,8 +111,10 @@ func (col *Collector) String() string {
 // Update runs the collector query and atomically updates the cached metrics.
 // Update is called automaticlly after the collector is registered.
 func (col *Collector) Update() error {
+	logx.Debug.Println("Update:", col.metricName)
 	metrics, err := col.runner.Query(col.query)
 	if err != nil {
+		logx.Debug.Println("Failed to run query:", err)
 		return err
 	}
 	// Swap the cached metrics.
