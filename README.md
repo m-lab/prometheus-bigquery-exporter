@@ -115,24 +115,24 @@ Use the following steps:
 
 1. Build the docker image.
 
-```sh
-docker build -t bqx-local -f Dockerfile .
-```
+  ```sh
+  docker build -t bqx-local -f Dockerfile .
+  ```
 
 1. Authenticate using your Google account. Both steps are necessary, the
   first to run gcloud commands (which uses user credentials), the second to run
   the bigquery exporter (which uses application default credentials).
 
-```sh
-gcloud auth login
-gcloud auth application-default login
-```
+  ```sh
+  gcloud auth login
+  gcloud auth application-default login
+  ```
 
 1. Run the image, with fowarded ports and access to gcloud credentials.
 
-```sh
-docker run -p 9348:9348 --rm -v $HOME/.config/gcloud:/root/.config/gcloud \
-  -v $PWD:/queries -it bqx-local \
-    -project $GCLOUD_PROJECT \
-    -guage-query /queries/example/config/bq_example.sql
-```
+  ```sh
+  docker run -p 9348:9348 --rm -v $HOME/.config/gcloud:/root/.config/gcloud \
+    -v $PWD:/queries -it bqx-local \
+      -project $GCLOUD_PROJECT \
+      -guage-query /queries/example/config/bq_example.sql
+  ```
