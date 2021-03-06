@@ -36,7 +36,8 @@ func (f *File) IsModified() (bool, error) {
 		log.Printf("Failed to stat %q: %v", f.Name, err)
 		return false, err
 	}
-	logx.Debug.Println("IsModified:stat2:", f.Name, curr.ModTime(), f.stat.ModTime(), curr.ModTime().After(f.stat.ModTime()))
+	logx.Debug.Println("IsModified:stat2:", f.Name, curr.ModTime(), f.stat.ModTime(),
+		curr.ModTime().After(f.stat.ModTime()))
 	modified := curr.ModTime().After(f.stat.ModTime())
 	if modified {
 		// Update the stat cache to the latest version.

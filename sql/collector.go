@@ -96,7 +96,8 @@ func (col *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	for i := range col.metrics {
 		for k, desc := range col.descs {
-			logx.Debug.Printf("%s labels:%#v values:%#v", col.metricName, metrics[i].LabelValues, metrics[i].Values[k])
+			logx.Debug.Printf("%s labels:%#v values:%#v",
+				col.metricName, metrics[i].LabelValues, metrics[i].Values[k])
 			ch <- prometheus.MustNewConstMetric(
 				desc, col.valType, metrics[i].Values[k], metrics[i].LabelValues...)
 		}
