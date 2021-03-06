@@ -61,7 +61,7 @@ Labels must be strings:
 * There is no limit on the number of labels, but you should respect the
   prometheus best practices by limiting label value cardinality.
 
-### Example query
+## Example Query
 
 The following query creates a label and groups by each label.
 
