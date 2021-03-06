@@ -122,7 +122,7 @@ Use the following steps:
   docker build -t bqx-local -f Dockerfile .
   ```
 
-1. Authenticate using your Google account. Both steps are necessary, the
+2. Authenticate using your Google account. Both steps are necessary, the
   first to run gcloud commands (which uses user credentials), the second to run
   the bigquery exporter (which uses application default credentials).
 
@@ -131,7 +131,7 @@ Use the following steps:
   gcloud auth application-default login
   ```
 
-1. Run the image, with fowarded ports and access to gcloud credentials.
+3. Run the image, with fowarded ports and access to gcloud credentials.
 
   ```sh
   docker run -p 9348:9348 --rm \
