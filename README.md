@@ -63,35 +63,38 @@ Labels must be strings:
 
 ### Example query
 
-The following query creates a "machine" label and counts the number of tests
+The following query creates a label and groups by each label.
 
-```sql
-SELECT
-  -- All columns not prefixed with "value" are added as metric labels.
-  server.Site as site,
-  server.Machine as machine,
-  -- All queries must have a single column prefixed with "value".
-  COUNT(*) AS value
-FROM
-  `measurement-lab.ndt.ndt7`
-GROUP BY
-  site, machine
-ORDER BY
-  value
-```
+  ```sql
+  -- Example data in place of an actual table of values.
+  WITH example_data as (
+      SELECT "a" as label, 5 as widgets
+      UNION ALL
+      SELECT "b" as label, 2 as widgets
+      UNION ALL
+      SELECT "b" as label, 3 as widgets
+  )
 
-* Save the sample query to a file named "ndt_test_count.sql".
+  SELECT
+     label, SUM(widgets) as value
+  FROM
+     example_data
+  GROUP BY
+     label
+  ```
+
+* Save the sample query to a file named "bq_example.sql".
 * Start the exporter:
 
   ```sh
-  prometheus-bigquery-exporter -gauge-query ndt_test_count.sql
+  prometheus-bigquery-exporter -gauge-query bq_example.sql
   ```
 
 * Visit http://localhost:9348/metrics and you will find metrics like:
 
   ```txt
-    ndt_test_count{site="foo01", machine="mlab1"} 100
-    ndt_test_count{site="foo01", machine="mlab2"} 200
+    bq_example{label="a"} 5
+    bq_example{label="b"} 5
     ...
   ```
 
@@ -131,7 +134,8 @@ Use the following steps:
 1. Run the image, with fowarded ports and access to gcloud credentials.
 
   ```sh
-  docker run -p 9348:9348 --rm -v $HOME/.config/gcloud:/root/.config/gcloud \
+  docker run -p 9348:9348 --rm \
+    -v $HOME/.config/gcloud:/root/.config/gcloud \
     -v $PWD:/queries -it bqx-local \
       -project $GCLOUD_PROJECT \
       -guage-query /queries/example/config/bq_example.sql
