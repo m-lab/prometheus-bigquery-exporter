@@ -4,9 +4,7 @@
 
 An exporter for converting BigQuery results into Prometheus metrics.
 
-## Limitations
-
-### No historical values
+## Limitations: No historical values
 
 Prometheus collects the *current* status of a system as reported by an exporter.
 Prometheus then associates the values collected with a timestamp of the time of
@@ -25,17 +23,13 @@ The prometheus-bigquery-exporter accepts arbitrary BQ queries. However, the
 query results must be structured in a predictable way for the exporter to
 successfully interpret and convert it into prometheus metrics.
 
-### Metric names
+### Metric names and values
 
-Metric names are derived from the query file name and query values. A query
-with the following file name will export metrics with the following prefix.
-
-### Metric values
-
-The prometheus-bigquery-exporter identifies which columns are the metric
-values by looking for column names that match the pattern: `value([.+])`. All
-characters in the group are appending to the metric prefix taken from the
-query file name. For example:
+Metric names are derived from the query file name and query value columns.
+The bigquery-exporter identifies value columns by looking for column names
+that match the pattern: `value([.+])`. All characters in the matching group
+`([.+])` are appending to the metric prefix taken from the query file name.
+For example:
 
 * Filename: `bq_ndt_test.sql`
 * Metric prefix: `bq_ndt_test`
@@ -44,7 +38,7 @@ query file name. For example:
 
 Value columns are required (at least one):
 
-* `value([.+])` - every query result must define a result "value". Values must
+* `value([.+])` - every query must define a result "value". Values must
   be integers or floats. For a query to return multiple values, prefix each
   with "value" and define unique suffixes.
 
@@ -60,6 +54,11 @@ Labels must be strings:
 
 * There is no limit on the number of labels, but you should respect the
   prometheus best practices by limiting label value cardinality.
+
+Duplicate metrics are an error:
+
+* If the query returns multiple rows that are not distinguished by the set of
+  labels for each row.
 
 ## Example Query
 
