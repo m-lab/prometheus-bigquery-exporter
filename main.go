@@ -81,10 +81,15 @@ func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
 
 				log.Println("Registering:", fileToMetric(f.Name))
-				err = f.Register(c)
+				// NOTE: prometheus collector registration will fail when a file
+				// uses the same name but changes the metrics reported. Because
+				// this cannot be recovered, we use rtx.Must to exit and allow
+				// the runtime environment to restart.
+				rtx.Must(f.Register(c), "Failed to register collector: aborting")
 			} else {
-				log.Println("Updating:", fileToMetric(f.Name))
+				start := time.Now()
 				err = f.Update()
+				log.Println("Updating:", fileToMetric(f.Name), time.Since(start))
 			}
 			if err != nil {
 				log.Println("Error:", f.Name, err)
