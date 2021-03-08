@@ -28,7 +28,7 @@ successfully interpret and convert it into prometheus metrics.
 Metric names are derived from the query file name and query value columns.
 The bigquery-exporter identifies value columns by looking for column names
 that match the pattern: `value([.+])`. All characters in the matching group
-`([.+])` are appending to the metric prefix taken from the query file name.
+`([.+])` are appended to the metric prefix taken from the query file name.
 For example:
 
 * Filename: `bq_ndt_test.sql`
