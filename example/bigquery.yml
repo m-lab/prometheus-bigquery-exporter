@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bigquery-exporter-5m
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: bigquery-exporter
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: 'true'
+      labels:
+        run: bigquery-exporter
+    spec:
+      containers:
+      - name: bigquery-exporter
+        image: measurementlab/prometheus-bigquery-exporter:latest
+        args: [ "-project=mlab-sandbox",
+                "-refresh=1m",
+                "-gauge-query=/queries/bq_example.sql",
+              ]
+        ports:
+        - containerPort: 9050
+        volumeMounts:
+        - mountPath: /queries
+          name: bigquery-config
+
+      volumes:
+      - name: bigquery-config
+        configMap:
+          name: bigquery-exporter-config
