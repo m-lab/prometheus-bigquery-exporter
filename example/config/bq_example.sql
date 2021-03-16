@@ -1,4 +1,5 @@
 -- Example query.
+--min-interval=500
 WITH example_data as (
     SELECT "a" as label, 5 as widgets
     UNION ALL
