@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/prometheusx/promtest"
@@ -132,32 +131,5 @@ func TestNewMetric(t *testing.T) {
 	}
 	if !reflect.DeepEqual(m, want) {
 		t.Errorf("NewMetric() = %v, want %v", m, want)
-	}
-}
-
-func TestFetchMinInterval(t *testing.T) {
-	q := "--first row\n--min-interval=345\nquery\n"
-	minInterval := fetchMinInterval(q)
-	if !(minInterval == 344) {
-		t.Errorf("fetchMinInterval() is %d, want %d", minInterval, 345)
-	}
-}
-
-func TestUpdate(t *testing.T) {
-	r := &errorQueryRunner{}
-	c := NewCollector(r, prometheus.GaugeValue, "metric_name", "")
-	if !(c.lastRun == -1) {
-		t.Error("Collector.lastRun was inicialized as ", c.lastRun, ", want -1")
-	}
-	c.Update()
-	last := c.lastRun
-	now := time.Now().Unix()
-	if !(c.lastRun >= time.Now().Unix()-1) {
-		t.Error("Collector.lastRun should be now: ", now, ", but is: ", c.lastRun)
-	}
-	c.minInterval = 500
-	c.Update()
-	if !(c.lastRun == last) {
-		t.Error("Collector.lastRun should be ", last, ", but is ", c.lastRun)
 	}
 }
