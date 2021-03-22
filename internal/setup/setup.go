@@ -55,7 +55,7 @@ func (f *File) Register(c *sql.Collector) error {
 		logx.Debug.Println("Unregister:", ok)
 		if !ok {
 			// This is a fatal error. If the
-			return fmt.Errorf("Failed to unregister %q", f.Name)
+			return fmt.Errorf("failed to unregister %q", f.Name)
 		}
 		f.c = nil
 	}
@@ -65,10 +65,10 @@ func (f *File) Register(c *sql.Collector) error {
 		// While collector Update could fail transiently, this may be a fatal error.
 		return err
 	}
-	logx.Debug.Println("Register: success:", f.Name)
+	logx.Debug.Println("Register:", f.Name, c.RegisterErr)
 	// Save the registered collector.
 	f.c = c
-	return nil
+	return c.RegisterErr
 }
 
 // Update runs the collector query again.

@@ -51,6 +51,9 @@ type Collector struct {
 	metrics []Metric
 	// mux locks access to types above.
 	mux sync.Mutex
+
+	// RegisterErr contains any error during registration. This should be considered fatal.
+	RegisterErr error
 }
 
 // NewCollector creates a new BigQuery Collector instance.
@@ -76,6 +79,7 @@ func (col *Collector) Describe(ch chan<- *prometheus.Desc) {
 		err := col.Update()
 		if err != nil {
 			log.Println(err)
+			col.RegisterErr = err
 		}
 		col.setDesc()
 	}
