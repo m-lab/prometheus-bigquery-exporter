@@ -31,18 +31,22 @@ import (
 var (
 	counterSources = flagx.StringArray{}
 	gaugeSources   = flagx.StringArray{}
+	config         = flag.String("config", "config.yaml", "Configuration file name")
 	project        = flag.String("project", "", "GCP project name.")
 	refresh        = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
 func init() {
-	// TODO: support counter queries.
 	flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
 	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
 
 	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
 	*prometheusx.ListenAddress = ":9348"
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
+func readYamlConf(filename string) {
+
 }
 
 // sleepUntilNext finds the nearest future time that is a multiple of the given
