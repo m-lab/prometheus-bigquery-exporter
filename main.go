@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/m-lab/go/flagx"
+	"github.com/m-lab/go/logx"
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/prometheus-bigquery-exporter/internal/config"
@@ -149,7 +150,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Printf("Configuration unmarshalled successfully: %+v", cfg)
+	logx.Debug.Printf("Configuration unmarshalled successfully: %+v", cfg)
 
 	srv := prometheusx.MustServeMetrics()
 	defer srv.Shutdown(mainCtx)
