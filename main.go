@@ -166,6 +166,13 @@ func main() {
 		if isModified {
 
 			logx.Debug.Printf("Start reload configuration")
+
+			unregisterCollectors(GaugeFiles)
+			logx.Debug.Printf("Unregistered old Gauge sql collectors")
+
+			unregisterCollectors(CounterFiles)
+			logx.Debug.Printf("Unregistered old Counter sql collectors")
+
 			cfg = initConfig(*configFile)
 			GaugeFiles = toFiles(cfg.GetGaugeFiles())
 			CounterFiles = toFiles(cfg.GetCounterFiles())
@@ -175,6 +182,17 @@ func main() {
 		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars, cfg)
 		sleepUntilNext(*refresh)
 	}
+}
+
+func unregisterCollectors(files []setup.File) error {
+
+	for _, file := range files {
+		err := file.Unregister()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func toFiles(paths []string) []setup.File {
