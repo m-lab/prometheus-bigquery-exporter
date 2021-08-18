@@ -17,4 +17,5 @@ require (
 	google.golang.org/api v0.15.0
 	google.golang.org/appengine v1.6.6 // indirect
 	gopkg.in/yaml.v2 v2.3.0
+	honnef.co/go/tools v0.0.1-2019.2.3
 )

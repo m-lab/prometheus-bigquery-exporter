@@ -73,13 +73,13 @@ func fileToQuery(filename string, vars map[string]string) string {
 	return q
 }
 
-func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string, isConfigFileModified bool) {
+func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string, cfg *config.Config) {
 	var wg sync.WaitGroup
 	for i := range GaugeFiles {
 		wg.Add(1)
-		go func(f *setup.File, isConfigFileModified bool) {
+		go func(f *setup.File, cfg *config.Config) {
 			modified, err := f.IsModified()
-			if (modified && err == nil) || isConfigFileModified {
+			if (modified && err == nil) || cfg.CheckModified() {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.GaugeValue,
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
@@ -99,14 +99,14 @@ func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, Coun
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&GaugeFiles[i], isConfigFileModified)
+		}(&GaugeFiles[i], cfg)
 	}
 	wg.Wait()
 	for i := range CounterFiles {
 		wg.Add(1)
-		go func(f *setup.File, isConfigFileModified bool) {
+		go func(f *setup.File, cfg *config.Config) {
 			modified, err := f.IsModified()
-			if (modified && err == nil) || isConfigFileModified {
+			if (modified && err == nil) || cfg.CheckModified() {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.CounterValue,
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
@@ -121,7 +121,7 @@ func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, Coun
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&CounterFiles[i], isConfigFileModified)
+		}(&CounterFiles[i], cfg)
 	}
 	wg.Wait()
 }
@@ -172,7 +172,7 @@ func main() {
 			logx.Debug.Printf("Configuration reload completed successfully: %+v", cfg)
 		}
 
-		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars, isModified)
+		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars, cfg)
 		sleepUntilNext(*refresh)
 	}
 }

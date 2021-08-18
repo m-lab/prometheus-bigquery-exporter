@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/m-lab/go/logx"
 	"github.com/spf13/afero"
@@ -19,6 +20,17 @@ type Config struct {
 	Project string      `yaml:"project"`
 	Gauge   []Query     `yaml:"gauge-queries"`
 	Counter []Query     `yaml:"counter-queries"`
+	mu      sync.Mutex  `yaml:"-"`
+}
+
+func (cfg *Config) CheckModified() bool {
+	defer cfg.mu.Unlock()
+	cfg.mu.Lock()
+	res, err := cfg.IsModified()
+	if err != nil {
+		fmt.Printf("Something wrong: %s", err.Error())
+	}
+	return res
 }
 
 type Query struct {
