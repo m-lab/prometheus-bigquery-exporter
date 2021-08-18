@@ -73,13 +73,13 @@ func fileToQuery(filename string, vars map[string]string) string {
 	return q
 }
 
-func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string, cfg *config.Config) {
+func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string) {
 	var wg sync.WaitGroup
 	for i := range GaugeFiles {
 		wg.Add(1)
-		go func(f *setup.File, cfg *config.Config) {
+		go func(f *setup.File) {
 			modified, err := f.IsModified()
-			if (modified && err == nil) || cfg.CheckModified() {
+			if modified && err == nil {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.GaugeValue,
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
@@ -99,14 +99,14 @@ func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, Coun
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&GaugeFiles[i], cfg)
+		}(&GaugeFiles[i])
 	}
 	wg.Wait()
 	for i := range CounterFiles {
 		wg.Add(1)
-		go func(f *setup.File, cfg *config.Config) {
+		go func(f *setup.File) {
 			modified, err := f.IsModified()
-			if (modified && err == nil) || cfg.CheckModified() {
+			if modified && err == nil {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.CounterValue,
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
@@ -121,7 +121,7 @@ func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, Coun
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&CounterFiles[i], cfg)
+		}(&CounterFiles[i])
 	}
 	wg.Wait()
 }
@@ -179,7 +179,7 @@ func main() {
 			logx.Debug.Printf("Configuration reload completed successfully: %+v", cfg)
 		}
 
-		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars, cfg)
+		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars)
 		sleepUntilNext(*refresh)
 	}
 }
