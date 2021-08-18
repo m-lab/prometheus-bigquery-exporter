@@ -141,29 +141,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	configPath := *configFile
-	cfg, err := config.ReadConfigFile(configPath)
-	if err != nil {
-		fmt.Printf("%s", err.Error())
-		os.Exit(1)
-	}
-
-	logx.Debug.Printf("Configuration unmarshalled successfully: %+v", cfg)
+	cfg := initConfig(*configFile)
 
 	srv := prometheusx.MustServeMetrics()
 	defer srv.Shutdown(mainCtx)
 
-	gaugeFilesPaths := cfg.GetGaugeFiles()
-	GaugeFiles := make([]setup.File, len(gaugeFilesPaths))
-	for i := range GaugeFiles {
-		GaugeFiles[i].Name = gaugeFilesPaths[i]
-	}
-
-	counterFilePaths := cfg.GetCounterFiles()
-	CounterFiles := make([]setup.File, len(counterFilePaths))
-	for i := range CounterFiles {
-		CounterFiles[i].Name = counterFilePaths[i]
-	}
+	GaugeFiles := toFiles(cfg.GetGaugeFiles())
+	CounterFiles := toFiles(cfg.GetCounterFiles())
 
 	client, err := bigquery.NewClient(mainCtx, cfg.Project)
 	rtx.Must(err, "Failed to allocate a new bigquery.Client")
@@ -173,7 +157,43 @@ func main() {
 	}
 
 	for mainCtx.Err() == nil {
+
+		isModified, err := cfg.IsModified()
+		if err != nil {
+			logx.Debug.Fatalf("Something wrong during configuration reload: %s", err.Error())
+			os.Exit(1)
+		}
+
+		if isModified {
+
+			logx.Debug.Printf("Start reload configuration")
+			cfg = initConfig(*configFile)
+			GaugeFiles = toFiles(cfg.GetGaugeFiles())
+			CounterFiles = toFiles(cfg.GetCounterFiles())
+			logx.Debug.Printf("Configuration reload completed successfully: %+v", cfg)
+		}
+
 		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars)
 		sleepUntilNext(*refresh)
 	}
+}
+
+func toFiles(paths []string) []setup.File {
+	files := make([]setup.File, len(paths))
+	for i := range paths {
+		files[i].Name = paths[i]
+	}
+	return files
+}
+
+func initConfig(configPath string) *config.Config {
+
+	cfg, err := config.ReadConfigFile(configPath)
+	if err != nil {
+		logx.Debug.Fatalf("%s", err.Error())
+		os.Exit(1)
+	}
+
+	logx.Debug.Printf("Configuration unmarshalled successfully: %+v", cfg)
+	return cfg
 }

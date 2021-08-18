@@ -2,16 +2,23 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
+	"github.com/m-lab/go/logx"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v2"
 )
 
+var fs = afero.NewOsFs()
+
 type Config struct {
-	Project string  `yaml:"project"`
-	Gauge   []Query `yaml:"gauge-queries"`
-	Counter []Query `yaml:"counter-queries"`
+	Name    string      `yaml:"-"`
+	stat    os.FileInfo `yaml:"-"`
+	Project string      `yaml:"project"`
+	Gauge   []Query     `yaml:"gauge-queries"`
+	Counter []Query     `yaml:"counter-queries"`
 }
 
 type Query struct {
@@ -27,6 +34,30 @@ func (cfg *Config) GetGaugeFiles() []string {
 		paths = append(paths, path.File)
 	}
 	return paths
+}
+
+func (cfg *Config) IsModified() (bool, error) {
+
+	var err error
+	if cfg.stat == nil {
+		cfg.stat, err = fs.Stat(cfg.Name)
+		logx.Debug.Println("IsModified:stat1:", cfg.Name, err)
+		// Return true on the first successful Stat(), or the error otherwise.
+		return err == nil, err
+	}
+	curr, err := fs.Stat(cfg.Name)
+	if err != nil {
+		log.Printf("Failed to stat %q: %v", cfg.Name, err)
+		return false, err
+	}
+	logx.Debug.Println("IsModified:stat2:", cfg.Name, curr.ModTime(), cfg.stat.ModTime(),
+		curr.ModTime().After(cfg.stat.ModTime()))
+	modified := curr.ModTime().After(cfg.stat.ModTime())
+	if modified {
+		// Update the stat cache to the latest version.
+		cfg.stat = curr
+	}
+	return modified, nil
 }
 
 func (cfg *Config) GetCounterFiles() []string {
@@ -58,6 +89,12 @@ func ReadConfigFile(path string) (*Config, error) {
 	err = validate(&cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	cfg.Name = path
+	cfg.stat, err = fs.Stat(cfg.Name)
+	if err != nil {
+		return nil, fmt.Errorf("something wrong during file stat extraction: %s", err.Error())
 	}
 
 	return &cfg, nil
