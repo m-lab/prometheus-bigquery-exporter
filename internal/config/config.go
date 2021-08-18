@@ -7,16 +7,13 @@ import (
 )
 
 type Config struct {
-	GaugeQueries   GaugeQueries   `yaml:"gauge_queries"`
-	CounterQueries CounterQueries `yaml:"counter_queries"`
+	Gauge   []Query `yaml:"gauge_queries"`
+	Counter []Query `yaml:"counter_queries"`
 }
 
-type GaugeQueries struct {
-	Queries []map[string]string `yaml:"gauge_queries,flow"`
-}
-
-type CounterQueries struct {
-	Queries []map[string]string `yaml:"counter_queries,flow"`
+type Query struct {
+	Query string `yaml:"query"`
+	File  string `yaml:"file"`
 }
 
 func ReadConfigFile(path string) (*Config, error) {
@@ -25,6 +22,7 @@ func ReadConfigFile(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer f.Close()
 
 	var cfg Config

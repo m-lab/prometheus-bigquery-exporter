@@ -46,19 +46,7 @@ func init() {
 		//TODO meglio panicare
 	}
 
-	for _, queryMap := range cfg.CounterQueries.Queries {
-
-		for _, queryValue := range queryMap {
-			counterSources = append(counterSources, queryValue)
-		}
-	}
-
-	for _, queryMap := range cfg.GaugeQueries.Queries {
-
-		for _, queryValue := range queryMap {
-			gaugeSources = append(gaugeSources, queryValue)
-		}
-	}
+	fmt.Printf("%v", cfg)
 
 	//flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
 	//flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
