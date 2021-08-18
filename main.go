@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -31,22 +32,15 @@ import (
 
 var (
 	//counterSources = flagx.StringArray{}
-	counterSources = []string{}
+	//counterSources = []string{}
 	//gaugeSources   = flagx.StringArray{}
-	gaugeSources = []string{}
-	configFile   = flag.String("config", "config.yaml", "Configuration file name")
-	project      = flag.String("project", "", "GCP project name.")
-	refresh      = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
+	//gaugeSources = []string{}
+	configFile = flag.String("config", "config.yaml", "Configuration file name")
+	project    = flag.String("project", "", "GCP project name.")
+	refresh    = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
 func init() {
-	cfg, err := config.ReadConfigFile(*configFile)
-	if err != nil {
-		fmt.Errorf("Something wrong during configur unmarshalling: %s", err.Error())
-		//TODO meglio panicare
-	}
-
-	fmt.Printf("%v", cfg)
 
 	//flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
 	//flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
@@ -54,10 +48,6 @@ func init() {
 	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
 	*prometheusx.ListenAddress = ":9348"
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
-func readYamlConf(filename string) {
-
 }
 
 // sleepUntilNext finds the nearest future time that is a multiple of the given
@@ -143,20 +133,37 @@ var newRunner = func(client *bigquery.Client) sql.QueryRunner {
 }
 
 func main() {
+
 	flag.Parse()
 	rtx.Must(flagx.ArgsFromEnv(flag.CommandLine), "Could not get args from env")
+
+	if configFile == nil {
+		fmt.Printf("Undefined config file path")
+		os.Exit(1)
+	}
+
+	configPath := *configFile
+	cfg, err := config.ReadConfigFile(configPath)
+	if err != nil {
+		fmt.Printf("%s", err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Printf("Configuration: %v", cfg)
 
 	srv := prometheusx.MustServeMetrics()
 	defer srv.Shutdown(mainCtx)
 
-	GaugeFiles := make([]setup.File, len(gaugeSources))
+	gaugeFilesPaths := cfg.GetGaugeFiles()
+	GaugeFiles := make([]setup.File, len(gaugeFilesPaths))
 	for i := range GaugeFiles {
-		GaugeFiles[i].Name = gaugeSources[i]
+		GaugeFiles[i].Name = gaugeFilesPaths[i]
 	}
 
-	CounterFiles := make([]setup.File, len(counterSources))
+	counterFilePaths := cfg.GetCounterFiles()
+	CounterFiles := make([]setup.File, len(counterFilePaths))
 	for i := range CounterFiles {
-		CounterFiles[i].Name = counterSources[i]
+		CounterFiles[i].Name = counterFilePaths[i]
 	}
 
 	client, err := bigquery.NewClient(mainCtx, *project)

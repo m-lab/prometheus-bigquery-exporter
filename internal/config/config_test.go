@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReadConfigFile(t *testing.T) {
+func TestReadConfigFile__good(t *testing.T) {
 
 	result, err := ReadConfigFile("../../configuration/test/test_1.yml")
 	assert.Nil(t, err)
@@ -33,4 +33,32 @@ func TestReadConfigFile(t *testing.T) {
 	counterQuery2 := result.Counter[2]
 	assert.Equal(t, "ghi_2", counterQuery2.Query)
 	assert.Equal(t, "/queries/metric5_name.sql", counterQuery2.File)
+}
+
+func TestReadConfigFile__empty_file(t *testing.T) {
+
+	_, err := ReadConfigFile("../../configuration/test/test_0.yml")
+	assert.NotNil(t, err)
+	assert.Equal(t, "something wrong during configuration unmarshalling: EOF", err.Error())
+}
+
+func TestReadConfigFile__no_counter_parameters(t *testing.T) {
+
+	_, err := ReadConfigFile("../../configuration/test/test_3.yml")
+	assert.NotNil(t, err)
+	assert.Equal(t, "no Counter parameters available", err.Error())
+}
+
+func TestReadConfigFile__no_gauge_parameters(t *testing.T) {
+
+	_, err := ReadConfigFile("../../configuration/test/test_2.yml")
+	assert.NotNil(t, err)
+	assert.Equal(t, "no Gauge parameters available", err.Error())
+}
+
+func TestReadConfigFile__wrong_path(t *testing.T) {
+
+	_, err := ReadConfigFile("../../not/existing/path")
+	assert.NotNil(t, err)
+	assert.Equal(t, "something wrong during file opening: open ../../not/existing/path: no such file or directory", err.Error())
 }

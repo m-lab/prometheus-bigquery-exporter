@@ -1,8 +1,8 @@
 gauge_queries:
-  - metric1_name:
-      file: "/queries/metric1_name.sql"
-      #refresh "*/5 * * * *" #every 5 minutes by default
+  - query:
+    file: "/queries/metric1_name.sql"
+    #refresh "*/5 * * * *" #every 5 minutes by default
 counter_queries:
-  - metric2_name:
-      file: "/queries/metric2_name.sql"
-      #refresh "30 9 * * *" #every day at 9:30
+  - query:
+    file: "/queries/metric2_name.sql"
+    #refresh "30 9 * * *" #every day at 9:30

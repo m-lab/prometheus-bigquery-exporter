@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -16,11 +17,31 @@ type Query struct {
 	File  string `yaml:"file"`
 }
 
+func (cfg *Config) GetGaugeFiles() []string {
+
+	var paths []string
+	for _, path := range cfg.Gauge {
+
+		paths = append(paths, path.File)
+	}
+	return paths
+}
+
+func (cfg *Config) GetCounterFiles() []string {
+
+	var paths []string
+	for _, path := range cfg.Counter {
+
+		paths = append(paths, path.File)
+	}
+	return paths
+}
+
 func ReadConfigFile(path string) (*Config, error) {
 
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("something wrong during file opening: %s", err.Error())
 	}
 
 	defer f.Close()
@@ -29,10 +50,25 @@ func ReadConfigFile(path string) (*Config, error) {
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(&cfg)
 	if err != nil {
+		return nil, fmt.Errorf("something wrong during configuration unmarshalling: %s", err.Error())
+	}
+
+	err = validate(&cfg)
+	if err != nil {
 		return nil, err
 	}
 
-	//TODO aggiungere un metodo di validazione semantica del contenuto della configuration
-
 	return &cfg, nil
+}
+
+func validate(cfg *Config) error {
+
+	if len(cfg.Counter) == 0 {
+		return fmt.Errorf("no Counter parameters available")
+	}
+
+	if len(cfg.Gauge) == 0 {
+		return fmt.Errorf("no Gauge parameters available")
+	}
+	return nil
 }
