@@ -18,6 +18,7 @@ import (
 	"github.com/m-lab/go/flagx"
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
+	"github.com/m-lab/prometheus-bigquery-exporter/internal/config"
 	"github.com/m-lab/prometheus-bigquery-exporter/internal/setup"
 	"github.com/m-lab/prometheus-bigquery-exporter/query"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
@@ -29,16 +30,38 @@ import (
 )
 
 var (
-	counterSources = flagx.StringArray{}
-	gaugeSources   = flagx.StringArray{}
-	config         = flag.String("config", "config.yaml", "Configuration file name")
-	project        = flag.String("project", "", "GCP project name.")
-	refresh        = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
+	//counterSources = flagx.StringArray{}
+	counterSources = []string{}
+	//gaugeSources   = flagx.StringArray{}
+	gaugeSources = []string{}
+	configFile   = flag.String("config", "config.yaml", "Configuration file name")
+	project      = flag.String("project", "", "GCP project name.")
+	refresh      = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
 func init() {
-	flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
-	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
+	cfg, err := config.ReadConfigFile(*configFile)
+	if err != nil {
+		fmt.Errorf("Something wrong during configur unmarshalling: %s", err.Error())
+		//TODO meglio panicare
+	}
+
+	for _, queryMap := range cfg.CounterQueries.Queries {
+
+		for _, queryValue := range queryMap {
+			counterSources = append(counterSources, queryValue)
+		}
+	}
+
+	for _, queryMap := range cfg.GaugeQueries.Queries {
+
+		for _, queryValue := range queryMap {
+			gaugeSources = append(gaugeSources, queryValue)
+		}
+	}
+
+	//flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
+	//flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
 
 	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
 	*prometheusx.ListenAddress = ":9348"
