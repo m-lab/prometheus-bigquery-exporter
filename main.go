@@ -184,15 +184,15 @@ func main() {
 	}
 }
 
-func unregisterCollectors(files []setup.File) error {
+func unregisterCollectors(files []setup.File) {
 
 	for _, file := range files {
 		err := file.Unregister()
 		if err != nil {
-			return err
+			logx.Debug.Fatalf("Something wrong during unregistration: %s", err.Error())
+			os.Exit(1)
 		}
 	}
-	return nil
 }
 
 func toFiles(paths []string) []setup.File {
