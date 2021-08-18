@@ -73,13 +73,13 @@ func fileToQuery(filename string, vars map[string]string) string {
 	return q
 }
 
-func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string) {
+func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, CounterFiles []setup.File, vars map[string]string, isConfigFileModified bool) {
 	var wg sync.WaitGroup
 	for i := range GaugeFiles {
 		wg.Add(1)
-		go func(f *setup.File) {
+		go func(f *setup.File, isConfigFileModified bool) {
 			modified, err := f.IsModified()
-			if modified && err == nil {
+			if (modified && err == nil) || isConfigFileModified {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.GaugeValue,
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
@@ -99,14 +99,14 @@ func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, Coun
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&GaugeFiles[i])
+		}(&GaugeFiles[i], isConfigFileModified)
 	}
 	wg.Wait()
 	for i := range CounterFiles {
 		wg.Add(1)
-		go func(f *setup.File) {
+		go func(f *setup.File, isConfigFileModified bool) {
 			modified, err := f.IsModified()
-			if modified && err == nil {
+			if (modified && err == nil) || isConfigFileModified {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.CounterValue,
 					fileToMetric(f.Name), fileToQuery(f.Name, vars))
@@ -121,7 +121,7 @@ func reloadRegisterUpdate(client *bigquery.Client, GaugeFiles []setup.File, Coun
 				log.Println("Error:", f.Name, err)
 			}
 			wg.Done()
-		}(&CounterFiles[i])
+		}(&CounterFiles[i], isConfigFileModified)
 	}
 	wg.Wait()
 }
@@ -163,7 +163,6 @@ func main() {
 			logx.Debug.Fatalf("Something wrong during configuration reload: %s", err.Error())
 			os.Exit(1)
 		}
-
 		if isModified {
 
 			logx.Debug.Printf("Start reload configuration")
@@ -173,7 +172,7 @@ func main() {
 			logx.Debug.Printf("Configuration reload completed successfully: %+v", cfg)
 		}
 
-		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars)
+		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars, isModified)
 		sleepUntilNext(*refresh)
 	}
 }
