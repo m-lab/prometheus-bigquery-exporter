@@ -149,7 +149,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Printf("Configuration unmarshalled successfully: %v", cfg)
+	log.Printf("Configuration unmarshalled successfully: %+v", cfg)
 
 	srv := prometheusx.MustServeMetrics()
 	defer srv.Shutdown(mainCtx)
