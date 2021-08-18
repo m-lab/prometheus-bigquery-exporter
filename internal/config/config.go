@@ -3,13 +3,15 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Gauge   []Query `yaml:"gauge_queries"`
-	Counter []Query `yaml:"counter_queries"`
+	Project string  `yaml:project`
+	Gauge   []Query `yaml:"gauge-queries"`
+	Counter []Query `yaml:"counter-queries"`
 }
 
 type Query struct {
@@ -69,6 +71,9 @@ func validate(cfg *Config) error {
 
 	if len(cfg.Gauge) == 0 {
 		return fmt.Errorf("no Gauge parameters available")
+	}
+	if strings.TrimSpace(cfg.Project) == "" {
+		return fmt.Errorf("no Project parameter available")
 	}
 	return nil
 }

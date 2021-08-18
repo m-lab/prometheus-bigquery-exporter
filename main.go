@@ -33,11 +33,9 @@ import (
 
 var (
 	//counterSources = flagx.StringArray{}
-	//counterSources = []string{}
 	//gaugeSources   = flagx.StringArray{}
-	//gaugeSources = []string{}
+	//project    = flag.String("project", "", "GCP project name.")
 	configFile = flag.String("config", "config.yaml", "Configuration file name")
-	project    = flag.String("project", "", "GCP project name.")
 	refresh    = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
@@ -167,7 +165,7 @@ func main() {
 		CounterFiles[i].Name = counterFilePaths[i]
 	}
 
-	client, err := bigquery.NewClient(mainCtx, *project)
+	client, err := bigquery.NewClient(mainCtx, cfg.Project)
 	rtx.Must(err, "Failed to allocate a new bigquery.Client")
 	vars := map[string]string{
 		"UNIX_START_TIME":  fmt.Sprintf("%d", time.Now().UTC().Unix()),

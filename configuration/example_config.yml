@@ -1,8 +1,9 @@
-gauge_queries:
+project: "skyita-da-logging-noprod"
+gauge-queries:
   - query:
     file: "/queries/metric1_name.sql"
     #refresh "*/5 * * * *" #every 5 minutes by default
-counter_queries:
+counter-queries:
   - query:
     file: "/queries/metric2_name.sql"
     #refresh "30 9 * * *" #every day at 9:30
