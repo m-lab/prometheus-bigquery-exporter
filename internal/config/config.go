@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	Project string  `yaml:project`
+	Project string  `yaml:"project"`
 	Gauge   []Query `yaml:"gauge-queries"`
 	Counter []Query `yaml:"counter-queries"`
 }
