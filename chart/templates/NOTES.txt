@@ -1,0 +1,11 @@
+{{- if eq (printf "%s" .Values.bigQuery.projectId) "FALSE" }}
+######################################################################################
+####   ERROR: You did not set bigQuery.projectId in your `helm install' call. ####
+######################################################################################
+
+This deployment will be incomplete until you set an appropriate Google Cloud
+Project ID so we know where to gather metrics from.  You can do this by:
+
+    helm upgrade {{ .Release.Name }} \
+        --set bigQuery.projectId=project-id stable/bigquery-exporter
+{{- end }}

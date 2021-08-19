@@ -164,7 +164,7 @@ func main() {
 			os.Exit(1)
 		}
 		if isModified {
-
+			log.Println("Main configuration file change detected, reloading")
 			logx.Debug.Printf("Start reload configuration")
 
 			unregisterCollectors(GaugeFiles)
@@ -176,7 +176,8 @@ func main() {
 			cfg = initConfig(*configFile)
 			GaugeFiles = toFiles(cfg.GetGaugeFiles())
 			CounterFiles = toFiles(cfg.GetCounterFiles())
-			logx.Debug.Printf("Configuration reload completed successfully: %+v", cfg)
+			log.Println("Configuration reload completed successfully")
+			logx.Debug.Printf("%+v", cfg)
 		}
 
 		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars)
