@@ -11,7 +11,6 @@ func TestReadConfigFile__good(t *testing.T) {
 	result, err := ReadConfigFile("../../configuration/test/test_1.yml")
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(result.Gauge))
-	assert.Equal(t, "abc", result.Project)
 
 	gaugeQuery0 := result.Gauge[0]
 	assert.Equal(t, "abc", gaugeQuery0.Query)
@@ -57,12 +56,6 @@ func TestReadConfigFile__no_gauge_parameters(t *testing.T) {
 	assert.Equal(t, "no Gauge parameters available", err.Error())
 }
 
-func TestReadConfigFile__no_project_parameter(t *testing.T) {
-
-	_, err := ReadConfigFile("../../configuration/test/test_4.yml")
-	assert.NotNil(t, err)
-	assert.Equal(t, "no Project parameter available", err.Error())
-}
 func TestReadConfigFile__wrong_path(t *testing.T) {
 
 	_, err := ReadConfigFile("../../not/existing/path")

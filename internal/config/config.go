@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/m-lab/go/logx"
 	"github.com/spf13/afero"
@@ -16,7 +15,6 @@ var fs = afero.NewOsFs()
 type Config struct {
 	Name    string      `yaml:"-"`
 	stat    os.FileInfo `yaml:"-"`
-	Project string      `yaml:"project"`
 	Gauge   []Query     `yaml:"gauge-queries"`
 	Counter []Query     `yaml:"counter-queries"`
 }
@@ -108,9 +106,6 @@ func validate(cfg *Config) error {
 
 	if len(cfg.Gauge) == 0 {
 		return fmt.Errorf("no Gauge parameters available")
-	}
-	if strings.TrimSpace(cfg.Project) == "" {
-		return fmt.Errorf("no Project parameter available")
 	}
 	return nil
 }
