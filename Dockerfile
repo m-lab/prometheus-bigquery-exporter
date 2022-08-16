@@ -1,7 +1,7 @@
-FROM golang:alpine3.15 as builder
+FROM golang:1.18 as builder
 ADD . /go/src/github.com/m-lab/prometheus-bigquery-exporter
 WORKDIR /go/src/github.com/m-lab/prometheus-bigquery-exporter
-RUN apk add gcc libc-dev git
+ENV CGO_ENABLED 0
 RUN go vet && \
     go get -t . && \
     go install .
