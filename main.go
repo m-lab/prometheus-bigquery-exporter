@@ -10,14 +10,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/m-lab/go/flagx"
+	"github.com/m-lab/go/logx"
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/rtx"
+	"github.com/m-lab/prometheus-bigquery-exporter/internal/config"
 	"github.com/m-lab/prometheus-bigquery-exporter/internal/setup"
 	"github.com/m-lab/prometheus-bigquery-exporter/query"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
@@ -29,16 +32,17 @@ import (
 )
 
 var (
-	counterSources = flagx.StringArray{}
-	gaugeSources   = flagx.StringArray{}
-	project        = flag.String("project", "", "GCP project name.")
-	refresh        = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
+	//counterSources = flagx.StringArray{}
+	//gaugeSources   = flagx.StringArray{}
+	project    = flag.String("project", "", "GCP project name.")
+	configFile = flag.String("config", "config.yaml", "Configuration file name")
+	refresh    = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
 )
 
 func init() {
-	// TODO: support counter queries.
-	flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
-	flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
+
+	//flag.Var(&counterSources, "counter-query", "Name of file containing a counter query.")
+	//flag.Var(&gaugeSources, "gauge-query", "Name of file containing a gauge query.")
 
 	// Port registered at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
 	*prometheusx.ListenAddress = ":9348"
@@ -128,21 +132,22 @@ var newRunner = func(client *bigquery.Client) sql.QueryRunner {
 }
 
 func main() {
+
 	flag.Parse()
 	rtx.Must(flagx.ArgsFromEnv(flag.CommandLine), "Could not get args from env")
+
+	if configFile == nil {
+		fmt.Printf("Undefined config file path")
+		os.Exit(1)
+	}
+
+	cfg := initConfig(*configFile)
 
 	srv := prometheusx.MustServeMetrics()
 	defer srv.Shutdown(mainCtx)
 
-	GaugeFiles := make([]setup.File, len(gaugeSources))
-	for i := range GaugeFiles {
-		GaugeFiles[i].Name = gaugeSources[i]
-	}
-
-	CounterFiles := make([]setup.File, len(counterSources))
-	for i := range CounterFiles {
-		CounterFiles[i].Name = counterSources[i]
-	}
+	GaugeFiles := toFiles(cfg.GetGaugeFiles())
+	CounterFiles := toFiles(cfg.GetCounterFiles())
 
 	client, err := bigquery.NewClient(mainCtx, *project)
 	rtx.Must(err, "Failed to allocate a new bigquery.Client")
@@ -152,7 +157,61 @@ func main() {
 	}
 
 	for mainCtx.Err() == nil {
+
+		isModified, err := cfg.IsModified()
+		if err != nil {
+			logx.Debug.Fatalf("Something wrong during configuration reload: %s", err.Error())
+			os.Exit(1)
+		}
+		if isModified {
+			log.Println("Main configuration file change detected, reloading")
+			logx.Debug.Printf("Start reload configuration")
+
+			unregisterCollectors(GaugeFiles)
+			logx.Debug.Printf("Unregistered old Gauge sql collectors")
+
+			unregisterCollectors(CounterFiles)
+			logx.Debug.Printf("Unregistered old Counter sql collectors")
+
+			cfg = initConfig(*configFile)
+			GaugeFiles = toFiles(cfg.GetGaugeFiles())
+			CounterFiles = toFiles(cfg.GetCounterFiles())
+			log.Println("Configuration reload completed successfully")
+			logx.Debug.Printf("%+v", cfg)
+		}
+
 		reloadRegisterUpdate(client, GaugeFiles, CounterFiles, vars)
 		sleepUntilNext(*refresh)
 	}
+}
+
+func unregisterCollectors(files []setup.File) {
+
+	for _, file := range files {
+		err := file.Unregister()
+		if err != nil {
+			logx.Debug.Fatalf("Something wrong during unregistration: %s", err.Error())
+			os.Exit(1)
+		}
+	}
+}
+
+func toFiles(paths []string) []setup.File {
+	files := make([]setup.File, len(paths))
+	for i := range paths {
+		files[i].Name = paths[i]
+	}
+	return files
+}
+
+func initConfig(configPath string) *config.Config {
+
+	cfg, err := config.ReadConfigFile(configPath)
+	if err != nil {
+		logx.Debug.Fatalf("%s", err.Error())
+		os.Exit(1)
+	}
+
+	logx.Debug.Printf("Configuration unmarshalled successfully: %+v", cfg)
+	return cfg
 }

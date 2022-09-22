@@ -1,0 +1,9 @@
+project: "abc"
+gauge-queries:
+counter-queries:
+  - query: "abc_2"
+    file: "/queries/metric3_name.sql"
+  - query: "def_2"
+    file: "/queries/metric4_name.sql"
+  - query: "ghi_2"
+    file: "/queries/metric5_name.sql"
