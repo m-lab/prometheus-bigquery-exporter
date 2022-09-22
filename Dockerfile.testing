@@ -1,7 +1,0 @@
-FROM google/cloud-sdk
-RUN curl -O  https://storage.googleapis.com/golang/go1.12.linux-amd64.tar.gz
-RUN tar -C /usr/local -xf /go1.12.linux-amd64.tar.gz
-RUN rm -f /go1.12.linux-amd64.tar.gz
-ENV GOPATH /go
-ENV PATH $PATH:/usr/local/go/bin
-ENTRYPOINT ["/bin/bash"]
