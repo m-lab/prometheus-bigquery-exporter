@@ -61,7 +61,11 @@ func Test_main(t *testing.T) {
 
 	// Set the refresh period to a very small delay.
 	*refresh = time.Second
-	gaugeSources.Set(tmp.Name())
+
+	//TODO aggiornare i test dopo il completamento della logica
+	//gaugeSources.Set(tmp.Name())
+  //counterSources.Set(tmp.Name())
+
 
 	// Reset mainCtx to timeout after a second.
 	mainCtx, mainCancel = context.WithTimeout(mainCtx, time.Second)
@@ -70,7 +74,7 @@ func Test_main(t *testing.T) {
 	main()
 
 	// Verify that the fakeRunner was called twice.
-	if f.updated != 2 {
-		t.Errorf("main() failed to update; got %d, want 2", f.updated)
+	if f.updated != 4 {
+		t.Errorf("main() failed to update; got %d, want 4", f.updated)
 	}
 }

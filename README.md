@@ -4,6 +4,9 @@
 
 An exporter for converting BigQuery results into Prometheus metrics.
 
+This Fork adds a config file for multiple queries and Counter type metrics
+
+
 ## Limitations: No historical values
 
 Prometheus collects the *current* status of a system as reported by an exporter.

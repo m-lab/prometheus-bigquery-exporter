@@ -71,6 +71,16 @@ func (f *File) Register(c *sql.Collector) error {
 	return c.RegisterErr
 }
 
+func (f *File) Unregister() error {
+
+	unregitered := prometheus.Unregister(f.c)
+	if !unregitered {
+		return fmt.Errorf("something wrong during unregistering of sql collector of file: %s", f.Name)
+	}
+	logx.Debug.Println("Unregister:", f.Name, f.c.RegisterErr)
+	return nil
+}
+
 // Update runs the collector query again.
 func (f *File) Update() error {
 	if f.c != nil {
