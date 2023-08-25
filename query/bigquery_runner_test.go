@@ -170,15 +170,15 @@ func TestNewBQRunner(t *testing.T) {
 func TestBigQueryImpl_Query(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  bqfake.QueryConfig
+		config  bqfake.QueryConfig[map[string]bigquery.Value]
 		query   string
 		visit   func(row map[string]bigquery.Value) error
 		wantErr bool
 	}{
 		{
 			name: "success-iteration",
-			config: bqfake.QueryConfig{
-				RowIteratorConfig: bqfake.RowIteratorConfig{
+			config: bqfake.QueryConfig[map[string]bigquery.Value]{
+				RowIteratorConfig: bqfake.RowIteratorConfig[map[string]bigquery.Value]{
 					Rows: []map[string]bigquery.Value{{"value": 1.234}},
 				},
 			},
@@ -188,8 +188,8 @@ func TestBigQueryImpl_Query(t *testing.T) {
 		},
 		{
 			name: "visit-error",
-			config: bqfake.QueryConfig{
-				RowIteratorConfig: bqfake.RowIteratorConfig{
+			config: bqfake.QueryConfig[map[string]bigquery.Value]{
+				RowIteratorConfig: bqfake.RowIteratorConfig[map[string]bigquery.Value]{
 					Rows: []map[string]bigquery.Value{{"value": 1.234}},
 				},
 			},
@@ -200,15 +200,15 @@ func TestBigQueryImpl_Query(t *testing.T) {
 		},
 		{
 			name: "read-error",
-			config: bqfake.QueryConfig{
+			config: bqfake.QueryConfig[map[string]bigquery.Value]{
 				ReadErr: fmt.Errorf("This is a fake read error"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "iterator-error",
-			config: bqfake.QueryConfig{
-				RowIteratorConfig: bqfake.RowIteratorConfig{
+			config: bqfake.QueryConfig[map[string]bigquery.Value]{
+				RowIteratorConfig: bqfake.RowIteratorConfig[map[string]bigquery.Value]{
 					IterErr: fmt.Errorf("This is a fake iterator error"),
 				},
 			},
