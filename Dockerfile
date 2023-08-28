@@ -1,4 +1,4 @@
-FROM golang:1.18 as builder
+FROM golang:1.20 as builder
 ADD . /go/src/github.com/m-lab/prometheus-bigquery-exporter
 WORKDIR /go/src/github.com/m-lab/prometheus-bigquery-exporter
 ENV CGO_ENABLED 0
