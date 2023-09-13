@@ -139,3 +139,10 @@ Use the following steps:
       -project=$GCLOUD_PROJECT \
       -gauge-query=/queries/example/config/bq_example.sql
   ```
+
+# TODO
+
+The following items are not currently working/implemented
+
+1. Tests are failing
+2. Tests do not run in CI
