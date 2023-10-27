@@ -27,7 +27,7 @@ type fakeRunner struct {
 	updated int
 }
 
-func (f *fakeRunner) Query(query string) ([]sql.Metric, error) {
+func (f *fakeRunner) Query(query string) ([]sql.Metric, int64, error) {
 	r := []sql.Metric{
 		{
 			LabelKeys:   []string{"key"},
@@ -40,9 +40,9 @@ func (f *fakeRunner) Query(query string) ([]sql.Metric, error) {
 	f.updated++
 	if f.updated > 1 {
 		// Simulate an error after one successful query.
-		return nil, fmt.Errorf("Fake failure for testing")
+		return nil, 0, fmt.Errorf("Fake failure for testing")
 	}
-	return r, nil
+	return r, 0, nil
 }
 
 func Test_main(t *testing.T) {
