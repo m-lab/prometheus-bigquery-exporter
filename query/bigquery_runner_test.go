@@ -103,19 +103,20 @@ func TestRowToMetric(t *testing.T) {
 type fakeQuery struct {
 	err  error
 	rows []map[string]bigquery.Value
+	cost int64
 }
 
-func (f *fakeQuery) Query(q string, visit func(row map[string]bigquery.Value) error) error {
+func (f *fakeQuery) Query(q string, visit func(row map[string]bigquery.Value) error) (int64, error) {
 	if f.err != nil {
-		return f.err
+		return 0, f.err
 	}
 	for i := range f.rows {
 		err := visit(f.rows[i])
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return 0, nil
 }
 
 func TestBQRunner_Query(t *testing.T) {
@@ -151,7 +152,7 @@ func TestBQRunner_Query(t *testing.T) {
 			qr := &BQRunner{
 				runner: tt.runner,
 			}
-			got, err := qr.Query("select * from `fake-table`")
+			got, _, err := qr.Query("select * from `fake-table`")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("BQRunner.Query() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -221,7 +222,7 @@ func TestBigQueryImpl_Query(t *testing.T) {
 			b := &bigQueryImpl{
 				Client: client,
 			}
-			if err := b.Query(tt.query, tt.visit); (err != nil) != tt.wantErr {
+			if _, err := b.Query(tt.query, tt.visit); (err != nil) != tt.wantErr {
 				t.Errorf("bigQueryImpl.Query() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

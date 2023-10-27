@@ -62,12 +62,12 @@ func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Va
 
 // BQRunner is a concerete implementation of QueryRunner for BigQuery.
 type BQRunner struct {
-	runner *bigQueryImpl
+	runner runner
 }
 
 // runner interface allows unit testing of the Query function.
 type runner interface {
-	Query(q string, visit func(row map[string]bigquery.Value) error) error
+	Query(q string, visit func(row map[string]bigquery.Value) error) (int64, error)
 }
 
 // NewBQRunner creates a new QueryRunner instance.
