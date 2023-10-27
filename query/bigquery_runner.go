@@ -19,28 +19,50 @@ type bigQueryImpl struct {
 	bqiface.Client
 }
 
-func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) error {
+func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) (int64, error) {
+	// Create a query job.
 	q := b.Client.Query(query)
-	it, err := q.Read(context.Background())
+	job, err := q.Run(context.Background())
 	if err != nil {
-		return err
+		return 0, err
 	}
+
+	// Wait for the job to complete.
+	status, err := job.Wait(context.Background())
+	if err != nil {
+		return 0, status.Err()
+	}
+
+	// Get the query statistics to extract the cost.
+	queryStats := job.LastStatus().Statistics.Details.(*bigquery.QueryStatistics)
+	cost := int64(0)
+	if queryStats != nil {
+		cost = queryStats.TotalBytesBilled
+	}
+
+	// Now, you can proceed with reading and processing the query results.
 	var row map[string]bigquery.Value
+
+	it, err := job.Read(context.Background())
+	if err != nil {
+		return cost, err
+	}
 	for err = it.Next(&row); err == nil; err = it.Next(&row) {
 		err2 := visit(row)
 		if err2 != nil {
-			return err2
+			return cost, err2
 		}
 	}
+
 	if err != iterator.Done {
-		return err
+		return cost, err
 	}
-	return nil
+	return cost, nil
 }
 
 // BQRunner is a concerete implementation of QueryRunner for BigQuery.
 type BQRunner struct {
-	runner runner
+	runner *bigQueryImpl
 }
 
 // runner interface allows unit testing of the Query function.
@@ -60,16 +82,16 @@ func NewBQRunner(client *bigquery.Client) *BQRunner {
 // Query executes the given query. Query only supports standard SQL. The
 // query must define a column named "value" for the value, and may define
 // additional columns, all of which are used as metric labels.
-func (qr *BQRunner) Query(query string) ([]sql.Metric, error) {
+func (qr *BQRunner) Query(query string) ([]sql.Metric, int64, error) {
 	metrics := []sql.Metric{}
-	err := qr.runner.Query(query, func(row map[string]bigquery.Value) error {
+	cost, err := qr.runner.Query(query, func(row map[string]bigquery.Value) error {
 		metrics = append(metrics, rowToMetric(row))
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, cost, err
 	}
-	return metrics, nil
+	return metrics, cost, nil
 }
 
 // valToFloat extracts a float from the bigquery.Value irrespective of the

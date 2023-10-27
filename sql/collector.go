@@ -29,7 +29,7 @@ func NewMetric(labelKeys []string, labelValues []string, values map[string]float
 
 // QueryRunner defines the interface used to run a query and return an array of metrics.
 type QueryRunner interface {
-	Query(q string) ([]Metric, error)
+	Query(q string) ([]Metric, int64, error)
 }
 
 // Collector manages a prometheus.Collector for queries performed by a QueryRunner.
@@ -51,7 +51,8 @@ type Collector struct {
 	metrics []Metric
 	// mux locks access to types above.
 	mux sync.Mutex
-
+	// Total billed bytes by BigQuery
+	cost int64
 	// RegisterErr contains any error during registration. This should be considered fatal.
 	RegisterErr error
 }
@@ -65,6 +66,7 @@ func NewCollector(runner QueryRunner, valType prometheus.ValueType, metricName, 
 		valType:    valType,
 		descs:      nil,
 		metrics:    nil,
+		cost:       0,
 		mux:        sync.Mutex{},
 	}
 }
@@ -106,6 +108,8 @@ func (col *Collector) Collect(ch chan<- prometheus.Metric) {
 				desc, col.valType, metrics[i].Values[k], metrics[i].LabelValues...)
 		}
 	}
+	desc := prometheus.NewDesc("total_bytes_billed", "Total billed bytes", []string{"file_name"}, nil)
+	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(col.cost), col.metricName)
 }
 
 // String satisfies the Stringer interface. String returns the metric name.
@@ -117,7 +121,7 @@ func (col *Collector) String() string {
 // Update is called automaticlly after the collector is registered.
 func (col *Collector) Update() error {
 	logx.Debug.Println("Update:", col.metricName)
-	metrics, err := col.runner.Query(col.query)
+	metrics, cost, err := col.runner.Query(col.query)
 	if err != nil {
 		logx.Debug.Println("Failed to run query:", err)
 		return err
@@ -128,6 +132,7 @@ func (col *Collector) Update() error {
 	// Replace slice reference with new value returned from Query. References
 	// to the previous value of col.metrics are not affected.
 	col.metrics = metrics
+	col.cost = cost
 	return nil
 }
 
