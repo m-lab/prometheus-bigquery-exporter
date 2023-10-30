@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/m-lab/go/prometheusx"
 	"github.com/m-lab/go/prometheusx/promtest"
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,17 +19,17 @@ type fakeQueryRunner struct {
 	metrics []Metric
 }
 
-func (qr *fakeQueryRunner) Query(query string) ([]Metric, error) {
-	return qr.metrics, nil
+func (qr *fakeQueryRunner) Query(query string) ([]Metric, *bigquery.QueryStatistics, error) {
+	return qr.metrics, nil, nil
 }
 
 type errorQueryRunner struct {
 	count int
 }
 
-func (qr *errorQueryRunner) Query(query string) ([]Metric, error) {
+func (qr *errorQueryRunner) Query(query string) ([]Metric, *bigquery.QueryStatistics, error) {
 	qr.count++
-	return nil, fmt.Errorf("Fake query error")
+	return nil, nil, fmt.Errorf("Fake query error")
 }
 
 func TestCollector(t *testing.T) {

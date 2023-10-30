@@ -101,12 +101,12 @@ func TestRowToMetric(t *testing.T) {
 }
 
 type fakeQuery struct {
-	err  error
-	rows []map[string]bigquery.Value
-	cost int64
+	err        error
+	rows       []map[string]bigquery.Value
+	queryStats *bigquery.QueryStatistics
 }
 
-func (f *fakeQuery) Query(q string, visit func(row map[string]bigquery.Value) error) (int64, error) {
+func (f *fakeQuery) Query(q string, visit func(row map[string]bigquery.Value) error) (*bigquery.QueryStatistics, error) {
 	if f.err != nil {
 		return 0, f.err
 	}
@@ -222,8 +222,9 @@ func TestBigQueryImpl_Query(t *testing.T) {
 			b := &bigQueryImpl{
 				Client: client,
 			}
-			if _, err := b.Query(tt.query, tt.visit); (err != nil) != tt.wantErr {
+			if cost, err := b.Query(tt.query, tt.visit); (err != nil) != tt.wantErr {
 				t.Errorf("bigQueryImpl.Query() error = %v, wantErr %v", err, tt.wantErr)
+				fmt.Println(cost)
 			}
 		})
 	}
