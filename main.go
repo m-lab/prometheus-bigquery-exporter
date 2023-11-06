@@ -30,26 +30,25 @@ import (
 )
 
 var (
-	counterSources = flagx.StringArray{}
-	gaugeSources   = flagx.StringArray{}
-	project        = flag.String("project", "", "GCP project name.")
-	refresh        = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
-	keepAlive      = flag.Bool("keepAlive", false, "Keep the process alive even if query fails to execute.")
+	gaugeSources = flagx.StringArray{}
+	project      = flag.String("project", "", "GCP project name.")
+	refresh      = flag.Duration("refresh", 5*time.Minute, "Interval between updating metrics.")
+	keepAlive    = flag.Bool("keepAlive", false, "Keep the process alive even if query fails to execute.")
 
 	successFilesCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "success_files_executed_total",
+		Name: "bqx_success_files_executed_total",
 		Help: "The total number of successfully executed files",
 	}, []string{"filename"})
 
 	failedFilesCounter = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "failed_files_executed_total",
+		Name: "bqx_failed_files_executed_total",
 		Help: "The total number of failed executed files",
 	}, []string{"filename"})
 	updateDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "query_runtime_duration_seconds",
+		Name:    "bqx_query_runtime_duration_seconds",
 		Help:    "Duration taken for updating files",
 		Buckets: []float64{.1, .25, .5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600},
-	}, []string{"filename"})
+	}, []string{"filename", "status"})
 )
 
 func init() {
@@ -92,6 +91,7 @@ func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[
 		wg.Add(1)
 		go func(f *setup.File) {
 			modified, err := f.IsModified()
+			start := time.Now()
 			if modified && err == nil {
 				c := sql.NewCollector(
 					newRunner(client), prometheus.GaugeValue,
@@ -102,25 +102,21 @@ func reloadRegisterUpdate(client *bigquery.Client, files []setup.File, vars map[
 				// uses the same name but changes the metrics reported. Because
 				// this cannot be recovered, we use rtx.Must to exit and allow
 				// the runtime environment to restart.
+				err = f.Register(c)
 				if !keepAlive {
 					rtx.Must(f.Register(c), "Failed to register collector: aborting")
-				} else {
-					err = f.Register(c)
-				}
-				if err == nil {
-					successFilesCounter.WithLabelValues(fileToMetric(f.Name)).Inc()
 				}
 			} else {
-				start := time.Now()
 				err = f.Update()
 				log.Println("Updating:", fileToMetric(f.Name), time.Since(start))
-				updateDuration.WithLabelValues(fileToMetric(f.Name)).Observe(time.Since(start).Seconds())
 			}
 			if err != nil {
-				log.Println("Error:", f.Name, err)
 				failedFilesCounter.WithLabelValues(fileToMetric(f.Name)).Inc()
+				updateDuration.WithLabelValues(fileToMetric(f.Name), "failed").Observe(time.Since(start).Seconds())
+				log.Println("Error:", f.Name, err)
 			} else {
 				successFilesCounter.WithLabelValues(fileToMetric(f.Name)).Inc()
+				updateDuration.WithLabelValues(fileToMetric(f.Name), "success").Observe(time.Since(start).Seconds())
 			}
 			wg.Done()
 		}(&files[i])
