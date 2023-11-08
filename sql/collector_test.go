@@ -2,7 +2,7 @@ package sql
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"reflect"
@@ -48,6 +48,8 @@ func TestCollector(t *testing.T) {
 	expectedMetrics := []string{
 		`fake_metric{key="thing"} 1.1`,
 		`fake_metric{key="thing2"} 2.1`,
+		`bqx_slot_seconds_utilized{file_name="fake_metric"} 0`,
+		`bqx_total_bytes_billed{file_name="fake_metric"} 0`,
 	}
 	c := NewCollector(
 		&fakeQueryRunner{metrics}, prometheus.GaugeValue, "fake_metric", "-- not used")
@@ -55,8 +57,8 @@ func TestCollector(t *testing.T) {
 	// NOTE: prometheus.Desc and prometheus.Metric are opaque interfaces that do
 	// not allow introspection. But, we know how many to expect, so check the
 	// counts added to the channels.
-	chDesc := make(chan *prometheus.Desc, 2)
-	chCol := make(chan prometheus.Metric, 2)
+	chDesc := make(chan *prometheus.Desc, 4)
+	chCol := make(chan prometheus.Metric, 4)
 
 	c.Describe(chDesc)
 	c.Collect(chCol)
@@ -67,8 +69,8 @@ func TestCollector(t *testing.T) {
 	if len(chDesc) != 1 {
 		t.Fatalf("want 1 prometheus.Desc, got %d\n", len(chDesc))
 	}
-	if len(chCol) != 2 {
-		t.Fatalf("want 2 prometheus.Metric, got %d\n", len(chCol))
+	if len(chCol) != 4 {
+		t.Fatalf("want 4 prometheus.Metric, got %d\n", len(chCol))
 	}
 
 	// Normally, we use the default registry via prometheus.Register. Using a
@@ -88,7 +90,7 @@ func TestCollector(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	rawMetrics, err := ioutil.ReadAll(res.Body)
+	rawMetrics, err := io.ReadAll(res.Body)
 	res.Body.Close()
 	if err != nil {
 		log.Fatal(err)

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 	"github.com/prometheus/client_golang/prometheus"
@@ -69,8 +70,8 @@ func TestFile_IsModified(t *testing.T) {
 
 type fakeRunner struct{}
 
-func (f *fakeRunner) Query(query string) ([]sql.Metric, error) {
-	return nil, fmt.Errorf("Fake failure")
+func (f *fakeRunner) Query(query string) ([]sql.Metric, *bigquery.QueryStatistics, error) {
+	return nil, nil, fmt.Errorf("Fake failure")
 }
 
 func TestFile_Update(t *testing.T) {
@@ -106,8 +107,8 @@ type fakeRegister struct {
 	metric sql.Metric
 }
 
-func (f *fakeRegister) Query(query string) ([]sql.Metric, error) {
-	return []sql.Metric{f.metric}, nil
+func (f *fakeRegister) Query(query string) ([]sql.Metric, *bigquery.QueryStatistics, error) {
+	return []sql.Metric{f.metric}, nil, nil
 }
 
 func TestFile_Register(t *testing.T) {

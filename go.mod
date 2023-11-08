@@ -5,7 +5,7 @@ go 1.20
 require (
 	cloud.google.com/go/bigquery v1.45.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d
-	github.com/m-lab/go v0.1.66
+	github.com/m-lab/go v0.1.67
 	github.com/prometheus/client_golang v1.7.1
 	github.com/spf13/afero v1.2.2
 	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b

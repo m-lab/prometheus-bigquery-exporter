@@ -5,6 +5,7 @@ package query
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -27,35 +28,35 @@ func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Va
 	if err != nil {
 		return nil, err
 	}
+
 	if job == nil {
 		return nil, nil
 	}
 
-	if job.LastStatus().Statistics == nil {
-		return nil, nil
-	}
 	// Wait for the job to complete.
 	status, err := job.Wait(context.Background())
 	if err != nil {
 		return nil, status.Err()
 	}
+	// Now, you can proceed with reading and processing the query results.
+	var row map[string]bigquery.Value
 
+	it, err := job.Read(context.Background())
+
+	if err != nil {
+		return nil, err
+	}
 	// Get the query statistics to extract the cost.
 	queryStatistics := new(bigquery.QueryStatistics)
-	if job.LastStatus().Statistics.Details != nil {
+	// Assuming that the LastStatus method returns a string
+	if job.LastStatus() != nil {
+		fmt.Println(job.LastStatus())
 		queryStats := job.LastStatus().Statistics.Details.(*bigquery.QueryStatistics)
 		if queryStats != nil {
 			queryStatistics = queryStats
 		}
 	}
 
-	// Now, you can proceed with reading and processing the query results.
-	var row map[string]bigquery.Value
-
-	it, err := job.Read(context.Background())
-	if err != nil {
-		return queryStatistics, err
-	}
 	for err = it.Next(&row); err == nil; err = it.Next(&row) {
 		err2 := visit(row)
 		if err2 != nil {
