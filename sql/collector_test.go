@@ -48,8 +48,8 @@ func TestCollector(t *testing.T) {
 	expectedMetrics := []string{
 		`fake_metric{key="thing"} 1.1`,
 		`fake_metric{key="thing2"} 2.1`,
-		`bqx_slot_seconds_utilized{file_name="fake_metric"} 0`,
-		`bqx_total_bytes_billed{file_name="fake_metric"} 0`,
+		`bqx_slot_seconds_utilized{filename="fake_metric"} 0`,
+		`bqx_total_bytes_billed{filename="fake_metric"} 0`,
 	}
 	c := NewCollector(
 		&fakeQueryRunner{metrics}, prometheus.GaugeValue, "fake_metric", "-- not used")

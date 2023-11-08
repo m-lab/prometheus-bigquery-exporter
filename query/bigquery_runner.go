@@ -5,7 +5,6 @@ package query
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -50,7 +49,6 @@ func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Va
 	queryStatistics := new(bigquery.QueryStatistics)
 	// Assuming that the LastStatus method returns a string
 	if job.LastStatus() != nil {
-		fmt.Println(job.LastStatus())
 		queryStats := job.LastStatus().Statistics.Details.(*bigquery.QueryStatistics)
 		if queryStats != nil {
 			queryStatistics = queryStats

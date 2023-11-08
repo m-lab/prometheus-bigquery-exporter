@@ -152,11 +152,11 @@ func (col *Collector) setDesc() {
 }
 
 func setSlotMillis(ch chan<- prometheus.Metric, slotMillis int64, metricName string) {
-	desc := prometheus.NewDesc("bqx_slot_seconds_utilized", "slot milliseconds utilized", []string{"file_name"}, nil)
+	desc := prometheus.NewDesc("bqx_slot_seconds_utilized", "slot milliseconds utilized", []string{"filename"}, nil)
 	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(slotMillis)/1000, metricName)
 }
 
 func setTotalBytesBilled(ch chan<- prometheus.Metric, totalBytesBilled int64, metricName string) {
-	desc := prometheus.NewDesc("bqx_total_bytes_billed", "Total billed bytes", []string{"file_name"}, nil)
+	desc := prometheus.NewDesc("bqx_total_bytes_billed", "Total billed bytes", []string{"filename"}, nil)
 	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(totalBytesBilled), metricName)
 }
