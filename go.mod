@@ -1,12 +1,12 @@
 module github.com/m-lab/prometheus-bigquery-exporter
 
-go 1.18
+go 1.20
 
 require (
 	cloud.google.com/go/bigquery v1.45.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d
-	github.com/m-lab/go v1.4.0
-	github.com/prometheus/client_golang v1.6.0
+	github.com/m-lab/go v0.1.66
+	github.com/prometheus/client_golang v1.11.1
 	github.com/spf13/afero v1.2.2
 	golang.org/x/net v0.7.0
 	google.golang.org/api v0.103.0
@@ -17,7 +17,7 @@ require (
 	cloud.google.com/go/compute v1.13.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
-	github.com/araddon/dateparse v0.0.0-20190622164848-0fb0a474d195 // indirect
+	github.com/araddon/dateparse v0.0.0-20200409225146-d820a6159ab1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
@@ -28,9 +28,8 @@ require (
 	github.com/googleapis/gax-go/v2 v2.7.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.10.0 // indirect
-	github.com/prometheus/procfs v0.0.11 // indirect
-	github.com/prometheus/prometheus v2.5.0+incompatible // indirect
+	github.com/prometheus/common v0.26.0 // indirect
+	github.com/prometheus/procfs v0.6.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sys v0.5.0 // indirect
