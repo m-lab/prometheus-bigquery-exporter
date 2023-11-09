@@ -8,7 +8,7 @@ require (
 	github.com/m-lab/go v0.1.66
 	github.com/prometheus/client_golang v1.11.1
 	github.com/spf13/afero v1.2.2
-	golang.org/x/net v0.9.0
+	golang.org/x/net v0.17.0
 	google.golang.org/api v0.114.0
 )
 
@@ -47,8 +47,8 @@ require (
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.7.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
