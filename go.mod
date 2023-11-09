@@ -1,6 +1,6 @@
 module github.com/m-lab/prometheus-bigquery-exporter
 
-go 1.18
+go 1.20
 
 require (
 	cloud.google.com/go/bigquery v1.45.0
@@ -17,7 +17,7 @@ require (
 	cloud.google.com/go/compute v1.13.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.8.0 // indirect
-	github.com/araddon/dateparse v0.0.0-20190622164848-0fb0a474d195 // indirect
+	github.com/araddon/dateparse v0.0.0-20200409225146-d820a6159ab1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
