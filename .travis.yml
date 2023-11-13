@@ -11,4 +11,4 @@ script:
 # Run query "unit tests".
 - make
 - go test -short -v ./... -cover=1 -coverprofile=_c.cov
-- $GOPATH/bin/goveralls -service=travis-ci -coverprofile=_c.cov
+- $GOPATH/bin/goveralls -service=travis-pro -coverprofile=_c.cov
