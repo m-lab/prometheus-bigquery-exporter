@@ -19,23 +19,53 @@ type bigQueryImpl struct {
 	bqiface.Client
 }
 
-func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) error {
+func (b *bigQueryImpl) Query(query string, visit func(row map[string]bigquery.Value) error) (*bigquery.QueryStatistics, error) {
+	// Create a query job.
 	q := b.Client.Query(query)
-	it, err := q.Read(context.Background())
+	job, err := q.Run(context.Background())
+
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	if job == nil {
+		return nil, nil
+	}
+
+	// Wait for the job to complete.
+	status, err := job.Wait(context.Background())
+	if err != nil {
+		return nil, status.Err()
+	}
+	// Now, you can proceed with reading and processing the query results.
 	var row map[string]bigquery.Value
+
+	it, err := job.Read(context.Background())
+
+	if err != nil {
+		return nil, err
+	}
+	// Get the query statistics to extract the cost.
+	queryStatistics := new(bigquery.QueryStatistics)
+	// Assuming that the LastStatus method returns a string
+	if job.LastStatus() != nil {
+		queryStats := job.LastStatus().Statistics.Details.(*bigquery.QueryStatistics)
+		if queryStats != nil {
+			queryStatistics = queryStats
+		}
+	}
+
 	for err = it.Next(&row); err == nil; err = it.Next(&row) {
 		err2 := visit(row)
 		if err2 != nil {
-			return err2
+			return queryStatistics, err2
 		}
 	}
+
 	if err != iterator.Done {
-		return err
+		return queryStatistics, err
 	}
-	return nil
+	return queryStatistics, nil
 }
 
 // BQRunner is a concerete implementation of QueryRunner for BigQuery.
@@ -45,7 +75,7 @@ type BQRunner struct {
 
 // runner interface allows unit testing of the Query function.
 type runner interface {
-	Query(q string, visit func(row map[string]bigquery.Value) error) error
+	Query(q string, visit func(row map[string]bigquery.Value) error) (*bigquery.QueryStatistics, error)
 }
 
 // NewBQRunner creates a new QueryRunner instance.
@@ -60,16 +90,16 @@ func NewBQRunner(client *bigquery.Client) *BQRunner {
 // Query executes the given query. Query only supports standard SQL. The
 // query must define a column named "value" for the value, and may define
 // additional columns, all of which are used as metric labels.
-func (qr *BQRunner) Query(query string) ([]sql.Metric, error) {
+func (qr *BQRunner) Query(query string) ([]sql.Metric, *bigquery.QueryStatistics, error) {
 	metrics := []sql.Metric{}
-	err := qr.runner.Query(query, func(row map[string]bigquery.Value) error {
+	queryStatistics, err := qr.runner.Query(query, func(row map[string]bigquery.Value) error {
 		metrics = append(metrics, rowToMetric(row))
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, queryStatistics, err
 	}
-	return metrics, nil
+	return metrics, queryStatistics, nil
 }
 
 // valToFloat extracts a float from the bigquery.Value irrespective of the

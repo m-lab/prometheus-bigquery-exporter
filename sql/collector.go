@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/m-lab/go/logx"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -29,7 +29,7 @@ func NewMetric(labelKeys []string, labelValues []string, values map[string]float
 
 // QueryRunner defines the interface used to run a query and return an array of metrics.
 type QueryRunner interface {
-	Query(q string) ([]Metric, error)
+	Query(q string) ([]Metric, *bigquery.QueryStatistics, error)
 }
 
 // Collector manages a prometheus.Collector for queries performed by a QueryRunner.
@@ -51,7 +51,9 @@ type Collector struct {
 	metrics []Metric
 	// mux locks access to types above.
 	mux sync.Mutex
-
+	// Total billed bytes by BigQuery
+	totalBytesBilled int64
+	slotMillis       int64
 	// RegisterErr contains any error during registration. This should be considered fatal.
 	RegisterErr error
 }
@@ -59,13 +61,15 @@ type Collector struct {
 // NewCollector creates a new BigQuery Collector instance.
 func NewCollector(runner QueryRunner, valType prometheus.ValueType, metricName, query string) *Collector {
 	return &Collector{
-		runner:     runner,
-		metricName: metricName,
-		query:      query,
-		valType:    valType,
-		descs:      nil,
-		metrics:    nil,
-		mux:        sync.Mutex{},
+		runner:           runner,
+		metricName:       metricName,
+		query:            query,
+		valType:          valType,
+		descs:            nil,
+		metrics:          nil,
+		totalBytesBilled: 0,
+		slotMillis:       0,
+		mux:              sync.Mutex{},
 	}
 }
 
@@ -106,6 +110,8 @@ func (col *Collector) Collect(ch chan<- prometheus.Metric) {
 				desc, col.valType, metrics[i].Values[k], metrics[i].LabelValues...)
 		}
 	}
+	setSlotMillis(ch, col.slotMillis, col.metricName)
+	setTotalBytesBilled(ch, col.totalBytesBilled, col.metricName)
 }
 
 // String satisfies the Stringer interface. String returns the metric name.
@@ -117,7 +123,7 @@ func (col *Collector) String() string {
 // Update is called automaticlly after the collector is registered.
 func (col *Collector) Update() error {
 	logx.Debug.Println("Update:", col.metricName)
-	metrics, err := col.runner.Query(col.query)
+	metrics, queryStatistics, err := col.runner.Query(col.query)
 	if err != nil {
 		logx.Debug.Println("Failed to run query:", err)
 		return err
@@ -128,6 +134,10 @@ func (col *Collector) Update() error {
 	// Replace slice reference with new value returned from Query. References
 	// to the previous value of col.metrics are not affected.
 	col.metrics = metrics
+	if queryStatistics != nil {
+		col.totalBytesBilled = queryStatistics.TotalBytesBilled
+		col.slotMillis = queryStatistics.SlotMillis
+	}
 	return nil
 }
 
@@ -139,4 +149,14 @@ func (col *Collector) setDesc() {
 			col.descs[k] = prometheus.NewDesc(col.metricName+k, "help text", col.metrics[0].LabelKeys, nil)
 		}
 	}
+}
+
+func setSlotMillis(ch chan<- prometheus.Metric, slotMillis int64, metricName string) {
+	desc := prometheus.NewDesc("bqx_slot_seconds_utilized", "slot milliseconds utilized", []string{"filename"}, nil)
+	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(slotMillis)/1000, metricName)
+}
+
+func setTotalBytesBilled(ch chan<- prometheus.Metric, totalBytesBilled int64, metricName string) {
+	desc := prometheus.NewDesc("bqx_total_bytes_billed", "Total billed bytes", []string{"filename"}, nil)
+	ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, float64(totalBytesBilled), metricName)
 }

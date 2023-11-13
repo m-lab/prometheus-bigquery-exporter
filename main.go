@@ -8,8 +8,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -76,7 +76,7 @@ func fileToMetric(filename string) string {
 
 // fileToQuery reads the content of the given file and returns the query with template values repalced with those in vars.
 func fileToQuery(filename string, vars map[string]string) string {
-	queryBytes, err := ioutil.ReadFile(filename)
+	queryBytes, err := os.ReadFile(filename)
 	rtx.Must(err, "Failed to open %q", filename)
 
 	q := string(queryBytes)

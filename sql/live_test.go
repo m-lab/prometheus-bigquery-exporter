@@ -67,9 +67,12 @@ func TestLiveQuery(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Logf("Live query test: %s", test.name)
-		metrics, err := qr.Query(test.query)
+		metrics, queryStatistics, err := qr.Query(test.query)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if queryStatistics == nil {
+			t.Error("QueryStatistics is nil")
 		}
 		if !reflect.DeepEqual(metrics, test.metrics) {
 			t.Errorf("Metrics do not match:\nwant %#v;\n got %#v", test.metrics, metrics)

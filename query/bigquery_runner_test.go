@@ -9,7 +9,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"github.com/m-lab/prometheus-bigquery-exporter/sql"
 
-	"github.com/m-lab/go/cloud/bqfake"
+	"github.com/m-lab/go/cloudtest/bqfake"
 )
 
 func TestRowToMetric(t *testing.T) {
@@ -101,21 +101,21 @@ func TestRowToMetric(t *testing.T) {
 }
 
 type fakeQuery struct {
-	err  error
 	rows []map[string]bigquery.Value
+	err  error
 }
 
-func (f *fakeQuery) Query(q string, visit func(row map[string]bigquery.Value) error) error {
+func (f *fakeQuery) Query(q string, visit func(row map[string]bigquery.Value) error) (*bigquery.QueryStatistics, error) {
 	if f.err != nil {
-		return f.err
+		return nil, f.err
 	}
 	for i := range f.rows {
 		err := visit(f.rows[i])
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func TestBQRunner_Query(t *testing.T) {
@@ -151,7 +151,7 @@ func TestBQRunner_Query(t *testing.T) {
 			qr := &BQRunner{
 				runner: tt.runner,
 			}
-			got, err := qr.Query("select * from `fake-table`")
+			got, _, err := qr.Query("select * from `fake-table`")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("BQRunner.Query() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -170,15 +170,15 @@ func TestNewBQRunner(t *testing.T) {
 func TestBigQueryImpl_Query(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  bqfake.QueryConfig[map[string]bigquery.Value]
+		config  bqfake.QueryConfig
 		query   string
 		visit   func(row map[string]bigquery.Value) error
 		wantErr bool
 	}{
 		{
 			name: "success-iteration",
-			config: bqfake.QueryConfig[map[string]bigquery.Value]{
-				RowIteratorConfig: bqfake.RowIteratorConfig[map[string]bigquery.Value]{
+			config: bqfake.QueryConfig{
+				RowIteratorConfig: bqfake.RowIteratorConfig{
 					Rows: []map[string]bigquery.Value{{"value": 1.234}},
 				},
 			},
@@ -188,8 +188,8 @@ func TestBigQueryImpl_Query(t *testing.T) {
 		},
 		{
 			name: "visit-error",
-			config: bqfake.QueryConfig[map[string]bigquery.Value]{
-				RowIteratorConfig: bqfake.RowIteratorConfig[map[string]bigquery.Value]{
+			config: bqfake.QueryConfig{
+				RowIteratorConfig: bqfake.RowIteratorConfig{
 					Rows: []map[string]bigquery.Value{{"value": 1.234}},
 				},
 			},
@@ -200,15 +200,15 @@ func TestBigQueryImpl_Query(t *testing.T) {
 		},
 		{
 			name: "read-error",
-			config: bqfake.QueryConfig[map[string]bigquery.Value]{
+			config: bqfake.QueryConfig{
 				ReadErr: fmt.Errorf("This is a fake read error"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "iterator-error",
-			config: bqfake.QueryConfig[map[string]bigquery.Value]{
-				RowIteratorConfig: bqfake.RowIteratorConfig[map[string]bigquery.Value]{
+			config: bqfake.QueryConfig{
+				RowIteratorConfig: bqfake.RowIteratorConfig{
 					IterErr: fmt.Errorf("This is a fake iterator error"),
 				},
 			},
@@ -221,9 +221,10 @@ func TestBigQueryImpl_Query(t *testing.T) {
 			b := &bigQueryImpl{
 				Client: client,
 			}
-			if err := b.Query(tt.query, tt.visit); (err != nil) != tt.wantErr {
+			if _, err := b.Query(tt.query, tt.visit); (err != nil) != tt.wantErr {
 				t.Errorf("bigQueryImpl.Query() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
 		})
 	}
 }
