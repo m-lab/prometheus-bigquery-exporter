@@ -136,6 +136,6 @@ Use the following steps:
   docker run -p 9348:9348 --rm \
     -v $HOME/.config/gcloud:/root/.config/gcloud \
     -v $PWD:/queries -it bqx-local \
-      -project $GCLOUD_PROJECT \
-      -guage-query /queries/example/config/bq_example.sql
+      -project=$GCLOUD_PROJECT \
+      -gauge-query=/queries/example/config/bq_example.sql
   ```
