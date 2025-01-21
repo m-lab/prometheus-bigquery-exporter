@@ -118,7 +118,13 @@ Use the following steps:
 1. Build the docker image.
 
   ```sh
-  docker build -t bqx-local -f Dockerfile .
+  docker build -t prometheus-bigquery-exporter -f Dockerfile .
+  ```
+
+  or use the make target:
+ 
+  ```sh
+  make docker
   ```
 
 2. Authenticate using your Google account. Both steps are necessary, the
@@ -135,7 +141,17 @@ Use the following steps:
   ```sh
   docker run -p 9348:9348 --rm \
     -v $HOME/.config/gcloud:/root/.config/gcloud \
-    -v $PWD:/queries -it bqx-local \
+    -v $PWD:/queries -it prometheus-bigquery-exporter \
       -project=$GCLOUD_PROJECT \
       -gauge-query=/queries/example/config/bq_example.sql
   ```
+
+  or use the make target:
+
+  ```sh
+  make run-query query=<file>.sql project=<google project id>
+  ```
+
+4. Access the metrics
+
+  Review the generated metrics at [http://localhost:9348/metrics](http://localhost:9348/metrics).
